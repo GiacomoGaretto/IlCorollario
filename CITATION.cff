@@ -7,5 +7,6 @@ authors:
     given-names: "Giacomo"
 version: "0.1.0"
 date-released: "2026-01-23"
+doi: 10.5281/zenodo.18352223
 url: "https://github.com/GiacomoGaretto/DelibGraph"
 license: "MIT"
