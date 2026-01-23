@@ -1,0 +1,16 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Local servers / tooling
+node_modules/
+dist/
+build/
+
+# Logs
+*.log
+
+# Python
+__pycache__/
+*.py[cod]

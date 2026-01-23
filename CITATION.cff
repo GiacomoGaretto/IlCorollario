@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "DelibGraph network visualization"
+type: software
+authors:
+  - family-names: "Garetto"
+    given-names: "Giacomo"
+version: "0.1.0"
+date-released: "2026-01-23"
+url: "https://github.com/GiacomoGaretto/DelibGraph"
+license: "MIT"
