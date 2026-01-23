@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18352223.svg)](https://doi.org/10.5281/zenodo.18352223)
+
 # Knowledge Graph Network Visualization (D3.js)
 
 Interactive, web-based Knowledge Graph (KG) network visualization for exploring large-scale deliberative discussions through relational structure (who/what connects to what), argumentative stance (pro/contra), and semantic bridges (keywords and clusters).
