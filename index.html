@@ -74,15 +74,6 @@
             </div>
         </div>
 
-        <!-- SEARCH BAR -->
-        <div id="search-panel" class="nav-hidden">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" id="search-input" placeholder="Search topics or keywords...">
-        </div>
-
         <!-- SUGGESTED VIEWS -->
         <div id="suggested-views-container" class="nav-hidden">
             <div class="suggested-view-header">Suggested Views</div>
@@ -90,6 +81,13 @@
                 <span>Most Contested</span>
                 <label class="toggle-switch">
                     <input type="checkbox" id="toggle-contested">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="suggested-view-row">
+                <span>Shared Keywords</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="toggle-shared">
                     <span class="slider"></span>
                 </label>
             </div>
@@ -107,8 +105,24 @@
             <svg id="minimap"></svg>
         </div>
 
+        <!-- THEME TOGGLE BUTTON -->
+        <div id="theme-toggle-container" class="nav-hidden side-control-container">
+            <button id="theme-settings-btn" class="time-btn">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-11.314l.707.707m11.314 11.314l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                </svg>
+            </button>
+            <div class="reset-tooltip">Theme Settings</div>
+            <div id="theme-switch-wrapper">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="dark-mode-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
         <!-- EXPORT VIEW BUTTON -->
-        <div id="export-view-container" class="nav-hidden">
+        <div id="export-view-container" class="nav-hidden side-control-container">
             <div id="export-menu">
                 <button class="export-opt" onclick="exportGraph('png')">PNG</button>
                 <button class="export-opt" onclick="exportGraph('svg')">SVG</button>
@@ -124,7 +138,7 @@
         </div>
 
         <!-- ZOOM IN BUTTON -->
-        <div id="zoom-in-container" class="nav-hidden">
+        <div id="zoom-in-container" class="nav-hidden side-control-container">
             <button id="zoom-in-btn" class="time-btn">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -135,7 +149,7 @@
         </div>
 
         <!-- ZOOM OUT BUTTON -->
-        <div id="zoom-out-container" class="nav-hidden">
+        <div id="zoom-out-container" class="nav-hidden side-control-container">
             <button id="zoom-out-btn" class="time-btn">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -145,7 +159,7 @@
         </div>
 
         <!-- RESET VIEW BUTTON -->
-        <div id="reset-view-container" class="nav-hidden">
+        <div id="reset-view-container" class="nav-hidden side-control-container">
             <button id="reset-view-btn" class="time-btn">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M15 3h6v6M9 21H3v-6M21 15v6h-6M3 9V3h6M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
@@ -166,7 +180,58 @@
         <!-- LEGENDA  -->
         <div id="legend-card" class="panel-card">
             <div id="legend-title">Legend</div>
-            <div id="legend"></div>
+            <div id="legend">
+                <!-- Sezione 1: Node Types -->
+                <div class="legend-section">
+                    <div class="legend-item">
+                        <div class="legend-symbol"><div class="symbol-cluster"></div></div>
+                        <div class="legend-label-group"><span class="label-main">Cluster Area</span></div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-symbol"><div class="symbol-inner symbol-circle bg-subject"></div></div>
+                        <div class="legend-label-group"><span class="label-main">Subject</span></div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-symbol"><div class="symbol-inner symbol-circle bg-position"></div></div>
+                        <div class="legend-label-group"><span class="label-main">Position</span></div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-symbol"><div class="symbol-inner symbol-circle bg-infavor"></div></div>
+                        <div class="legend-label-group"><span class="label-main">In Favor</span></div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-symbol"><div class="symbol-inner symbol-circle bg-against"></div></div>
+                        <div class="legend-label-group"><span class="label-main">Against</span></div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-symbol"><div class="symbol-inner symbol-diamond bg-keyword"></div></div>
+                        <div class="legend-label-group"><span class="label-main">Keyword</span></div>
+                    </div>
+                </div>
+
+                <div class="legend-divider"></div>
+
+                <!-- Sezione 2: How to Read -->
+                <div class="legend-section">
+                    <div class="section-title">How to read</div>
+                    <div class="legend-item">
+                        <div class="legend-symbol"><svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></div>
+                        <div class="legend-label-group"><span class="label-main">Size</span><span class="label-sub">Connections</span></div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-symbol"><svg viewBox="0 0 18 18"><circle cx="6" cy="9" r="2.5" fill="currentColor"/><circle cx="12" cy="9" r="2.5" fill="currentColor"/></svg></div>
+                        <div class="legend-label-group"><span class="label-main">Proximity</span><span class="label-sub">Similarity</span></div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-symbol"><svg viewBox="0 0 18 18"><line x1="3" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="2"/></svg></div>
+                        <div class="legend-label-group"><span class="label-main">Solid Line</span><span class="label-sub">Direct</span></div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-symbol"><svg viewBox="0 0 18 18"><line x1="3" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="2" stroke-dasharray="3,2"/></svg></div>
+                        <div class="legend-label-group"><span class="label-main">Dashed Line</span><span class="label-sub">Keyword</span></div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- DETAILS -->

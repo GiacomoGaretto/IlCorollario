@@ -12,6 +12,7 @@ let revealedNodes = new Set(); // Track manually expanded nodes
 let authorMap = new Map(); // To cache author details
 let tutorialSteps = [];
 let updateMinimapViewport = null; // Funzione placeholder per aggiornare la minimappa
+let updateSimulationCenter = null; // Funzione placeholder per centrare la simulazione
 
 // Group wrapper for zoom/pan
 const g = svg.append("g");
@@ -32,6 +33,36 @@ const zoom = d3.zoom()
 
 svg.call(zoom);
 
+function alignSideButtons() {
+    const minimap = document.getElementById("minimap-container");
+    const btnIds = [
+        "reset-view-container",
+        "zoom-out-container",
+        "zoom-in-container",
+        "export-view-container",
+        "theme-toggle-container"
+    ];
+    
+    const buttons = btnIds.map(id => document.getElementById(id)).filter(el => el);
+    if (!minimap || buttons.length < 2) return;
+
+    // Usiamo getComputedStyle per ottenere i valori di layout "target" definiti nel CSS.
+    // Questo ignora le trasformazioni temporanee (come il translateY di nav-hidden) e rispetta i margini reali.
+    const mStyle = window.getComputedStyle(minimap);
+    const mHeight = parseFloat(mStyle.height);
+    const mBottom = parseFloat(mStyle.bottom); 
+    const mLeft = parseFloat(mStyle.left) + parseFloat(mStyle.width) + 10;
+
+    const btnHeight = buttons[0].offsetHeight || 36; 
+    const numButtons = buttons.length;
+
+    buttons.forEach((btn, i) => {
+        const posBottom = mBottom + (i * (mHeight - btnHeight) / (numButtons - 1));
+        btn.style.bottom = `${posBottom}px`;
+        btn.style.left = `${mLeft}px`;
+    });
+}
+
 window.addEventListener("resize", () => {
     const container = document.getElementById("graph-container");
     if (!container) return;
@@ -40,11 +71,12 @@ window.addEventListener("resize", () => {
     height = container.clientHeight;
 
     // Controllo di sicurezza: esegui solo se la simulazione è già stata inizializzata
-    if (simulation) {
+    if (simulation && updateSimulationCenter) {
         const tutorialSidebar = document.getElementById("tutorial-sidebar");
         const tutorialOpen = tutorialSidebar && !tutorialSidebar.classList.contains('tutorial-closed');
         updateSimulationCenter(tutorialOpen);
     }
+    alignSideButtons();
 });
 
 function hexToRgba(hex, alpha) {
@@ -77,7 +109,8 @@ let selectionRing;
 // --- HIGHLIGHT FUNCTIONS ---
 function highlightNodes(filterFn) {
     // 1. Update NODI
-    nodeGroup.selectAll("path").transition().duration(400)
+    // Selezioniamo solo i path con classe .node, escludendo l'anello di selezione
+    nodeGroup.selectAll("path.node").transition().duration(400)
         .attr("fill-opacity", d => (filterFn(d) ? 1 : 0.15))
         .attr("stroke-opacity", d => (filterFn(d) ? 1 : 0.1));
 
@@ -111,7 +144,7 @@ function highlightNodes(filterFn) {
 }
 
 function resetHighlight() {
-    nodeGroup.selectAll("path").transition().duration(400)
+    nodeGroup.selectAll("path.node").transition().duration(400)
         .attr("fill-opacity", 1)
         .attr("stroke-opacity", 1);
 
@@ -146,7 +179,7 @@ Promise.all([
 ]).then(([nodes, edges, authorsData, tutorialData]) => {
 
     // Inizializza l'anello di selezione
-    selectionRing = nodeGroup.append("circle").attr("class", "selection-ring").style("opacity", 0);
+    selectionRing = nodeGroup.append("path").attr("class", "selection-ring").style("opacity", 0);
 
     if (Array.isArray(tutorialData) && tutorialData.length > 0) {
         tutorialSteps = tutorialData;
@@ -455,7 +488,14 @@ globalClusterMembers.forEach((members, clusterId) => {
 
         // Gestione Anello Tecnico
         selectedNodeData = d;
-        selectionRing.attr("r", getNodeVisualRadius(d) + 5).style("opacity", 1).raise();
+        
+        const shapeType = getShapeByType(titleAccessorGlobal(d));
+        const ringRadius = getNodeVisualRadius(d) + 6; // Leggermente più grande del nodo
+        const ringSize = Math.PI * Math.pow(ringRadius, 2);
+        const symbolType = (shapeType === "diamond") ? d3.symbolDiamond : d3.symbolCircle;
+
+        selectionRing.attr("d", d3.symbol().type(symbolType).size(ringSize)())
+            .style("opacity", 1).attr("transform", `translate(${d.x},${d.y})`).raise();
 
         resetEntitiesVisuals();
         showNodeDetails(d);
@@ -630,7 +670,7 @@ globalClusterMembers.forEach((members, clusterId) => {
         });
 
     // --- 3. DRAW NODES ---
-    let node = nodeGroup.selectAll("path")
+    let node = nodeGroup.selectAll("path.node")
         .data(nodes)
         .enter()
         .append("path")
@@ -690,13 +730,16 @@ globalClusterMembers.forEach((members, clusterId) => {
 
         // Hybrid Visibility Logic con filtro temporale
         const isNodeVisible = (d) => {
+            const t = titleAccessorGlobal(d);
+            
+            // Il SUBJECT deve essere sempre visibile come ancora del grafo
+            if (t === 'SUBJECT') return true;
+
             // Filtro TEMPO: Nodo non visibile se nel futuro
             if (d.timestamp && d.timestamp > currentTime) return false;
 
             // Rule 1: Explicitly revealed
             if (revealedNodes.has(d.id)) return true;
-
-            const t = titleAccessorGlobal(d);
 
             if (currentDepthLevel === 0) {
                 return t === 'SUBJECT';
@@ -731,11 +774,12 @@ globalClusterMembers.forEach((members, clusterId) => {
         if (simulation) {
             simulation.nodes(visibleNodes);
             simulation.force("link").links(physicsEdges);
-            simulation.alpha(0.3).restart();
+            const alpha = isTimelineUpdate ? 0.1 : 0.3;
+            simulation.alpha(alpha).restart();
         }
 
         // Rebind dei dati ai nodi visivi
-        const nodeSelection = nodeGroup.selectAll("path").data(visibleNodes, d => d.id);
+        const nodeSelection = nodeGroup.selectAll("path.node").data(visibleNodes, d => d.id);
         nodeSelection.exit().remove();
         const nodeEnter = nodeSelection.enter()
             .append("path")
@@ -850,7 +894,7 @@ globalClusterMembers.forEach((members, clusterId) => {
             .on("mouseout", handleHullMouseOut);
 
         // Aggiorna le variabili globali per la simulazione
-        node = nodeGroup.selectAll("path");
+        node = nodeGroup.selectAll("path.node");
         link = linkGroup.selectAll("line");
         labels = labelGroup.selectAll("text.node-label");
         hulls = hullGroup.selectAll("path");
@@ -901,25 +945,6 @@ globalClusterMembers.forEach((members, clusterId) => {
         simulation.alphaMin(0.001);
     }
 
-    function getLinkDistance(d) {
-        const sType = titleAccessorGlobal(d.source);
-        const tType = titleAccessorGlobal(d.target);
-        const rSource = getNodeVisualRadius(d.source);
-        const rTarget = getNodeVisualRadius(d.target);
-
-        // Distanza base ridotta rispetto all'originale per un grafo più compatto
-        let baseDist = 60 + rSource + rTarget;
-
-        if (sType === "ENTITY" || tType === "ENTITY") {
-            const ent = sType === "ENTITY" ? d.source : d.target;
-            if (ent._open) return baseDist + 80; // Più spazio se la keyword è aperta
-            return baseDist - 20; // Keyword chiuse molto vicine ai loro argomenti
-        }
-
-        if (d.mainStat === "HAS_POSITION") return baseDist; // Subject -> Position
-        return baseDist + 40; // Altri legami più lunghi
-    }
-
     function initCollisionForce() {
         collisionForce = d3.forceCollide()
             .radius(d => {
@@ -962,19 +987,20 @@ globalClusterMembers.forEach((members, clusterId) => {
         };
     }
 
-    function updateSimulationCenter(tutorialOpen) {
+    updateSimulationCenter = function(tutorialOpen) {
         if (!simulation) return;
 
-        const sidebarWidth = tutorialOpen ? 360 : 0;
+        const tutorialSidebar = document.getElementById("tutorial-sidebar");
+        const sidebarWidth = (tutorialOpen && tutorialSidebar) ? tutorialSidebar.getBoundingClientRect().width : 0;
         const graphContainerWidth = document.getElementById("graph-container").clientWidth;
         const cx = sidebarWidth + (graphContainerWidth - sidebarWidth) / 2;
         const cy = height / 2;
 
-        simulation.force("center", d3.forceCenter(cx, cy));
+        // Rimosso forceCenter per evitare sbalzi (jitter) quando compaiono nuovi nodi periferici
         simulation.force("x", d3.forceX(cx).strength(d => titleAccessorGlobal(d) === "SUBJECT" ? 0.5 : 0.05));
         simulation.force("y", d3.forceY(cy).strength(d => titleAccessorGlobal(d) === "SUBJECT" ? 0.5 : 0.05));
         simulation.alpha(0.5).restart();
-    }
+    };
 
     let tickCount = 0;
 
@@ -993,7 +1019,7 @@ globalClusterMembers.forEach((members, clusterId) => {
 
         // Aggiorna posizione Anello di Selezione
         if (selectedNodeData) {
-            selectionRing.attr("cx", selectedNodeData.x).attr("cy", selectedNodeData.y);
+            selectionRing.attr("transform", `translate(${selectedNodeData.x},${selectedNodeData.y})`);
         }
 
         // Aggiorna etichette fisse e hover
@@ -1115,33 +1141,58 @@ globalClusterMembers.forEach((members, clusterId) => {
         // Reset Toggles
         const tContested = document.getElementById("toggle-contested");
         const tLone = document.getElementById("toggle-lone");
+        const tShared = document.getElementById("toggle-shared");
         if (tContested) tContested.checked = false;
         if (tLone) tLone.checked = false;
+        if (tShared) tShared.checked = false;
     });
 
     let currentSelectedNodeId = null; // Gestione race condition per richieste asincrone
 
     async function addWikipediaLink(keyword, containerElement, nodeId) {
-        // API Wikipedia (Italiano come da richiesta)
-        const url = `https://it.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(keyword)}&format=json&origin=*`;
+        // 1. Pulizia profonda della keyword: rimuoviamo punteggiatura finale che spesso l'AI include
+        // e che blocca il matching esatto di Wikipedia.
+        let cleanKeyword = keyword.replace(/[.,;:]+$/, "").trim();
+        
+        // Primo tentativo: opensearch (veloce e preciso per titoli esatti)
+        const openSearchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(cleanKeyword)}&limit=1&namespace=0&format=json&origin=*`;
 
         try {
-            const response = await fetch(url);
-            const data = await response.json();
+            let response = await fetch(openSearchUrl);
+            let data = await response.json();
+            let wikiUrl = null;
 
-            // Se l'utente ha cambiato nodo nel frattempo, interrompi
             if (nodeId !== currentSelectedNodeId) return;
 
-            if (data.query && data.query.search && data.query.search.length > 0) {
-                const bestMatch = data.query.search[0].title;
-                const wikiUrl = `https://it.wikipedia.org/wiki/${encodeURIComponent(bestMatch.replace(/ /g, "_"))}`;
-                
+            if (data[1] && data[1].length > 0) {
+                wikiUrl = data[3][0];
+            } else {
+                // 2. FALLBACK: Se opensearch fallisce (comune con 3+ parole), usiamo la ricerca testuale.
+                // srlimit=1 ci dà il risultato più rilevante in assoluto.
+                const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanKeyword)}&srlimit=1&format=json&origin=*`;
+                const searchRes = await fetch(searchUrl);
+                const searchData = await searchRes.json();
+
+                if (nodeId !== currentSelectedNodeId) return;
+
+                if (searchData.query && searchData.query.search && searchData.query.search.length > 0) {
+                    const bestMatch = searchData.query.search[0].title;
+                    wikiUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(bestMatch.replace(/ /g, "_"))}`;
+                }
+            }
+
+            // Se abbiamo trovato un URL (tramite opensearch o fallback), mostriamo il bottone
+            if (wikiUrl) {
                 // Crea contenitore per il bottone per separarlo dal testo
                 const btnContainer = document.createElement("div");
                 btnContainer.style.marginTop = "12px";
-                
+                btnContainer.style.marginBottom = "8px";
+
                 // Bottone con stile
-                btnContainer.innerHTML = `<a href="${wikiUrl}" target="_blank" class="wiki-btn">Read more on Wikipedia →</a>`;
+                btnContainer.innerHTML = `
+                    <a href="${wikiUrl}" target="_blank" class="wiki-btn">Read more on Wikipedia →</a>
+                    <div class="wiki-disclaimer">Note: Search relevance may vary for complex or multi-word concepts.</div>
+                `;
                 
                 containerElement.appendChild(btnContainer);
             }
@@ -1153,6 +1204,9 @@ globalClusterMembers.forEach((members, clusterId) => {
     function showNodeDetails(d) {
         const detailsCard = d3.select("#details-card");
         detailsCard.classed("visible", true);
+        
+        // Attiva l'effetto "push" sulla legenda
+        d3.select("#info-panel").classed("details-active", true);
         
         // Aggiorna ID corrente per gestire le richieste async
         currentSelectedNodeId = d.id;
@@ -1222,8 +1276,8 @@ globalClusterMembers.forEach((members, clusterId) => {
             .text(nodeType);
 
         const displayTitle = (titleAccessorGlobal(d) === "CLUSTER") ?
-            (d.detail__tagline || d.detail__title || "—") :
-            (d.detail__title || "—");
+            (d.detail__tagline || d.detail__title || "") :
+            (d.detail__title || "");
 
         const displayText = (titleAccessorGlobal(d) === "CLUSTER") ?
             (d.detail__summary || d.detail__text || "") :
@@ -1370,6 +1424,8 @@ globalClusterMembers.forEach((members, clusterId) => {
     function clearNodeDetails() {
         // MODIFICA UI: Nascondiamo la card inferiore rimuovendo la classe visible
         d3.select("#details-card").classed("visible", false);
+        // Ripristina la legenda
+        d3.select("#info-panel").classed("details-active", false);
     }
 
     function truncate(str, max) {
@@ -1386,57 +1442,6 @@ globalClusterMembers.forEach((members, clusterId) => {
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
     }
-
-    const legendContainer = d3.select("#legend");
-
-    legendContainer.append("div")
-        .attr("id", "legend-title");
-
-    const legendTypes = Object.keys(colorMap).filter(k =>
-        k !== "default" &&
-        k !== "QUOTE" &&
-        k !== "ARGUMENT"
-    );
-
-    const legendItemCluster = legendContainer.append("div").attr("class", "legend-item");
-
-    legendItemCluster.append("div")
-        .attr("class", "legend-symbol")
-        .style("background-color", "#e2e8f0") // Deve corrispondere a clusterFillColor
-        .style("border", "2px solid #94a3b8")  // Deve corrispondere a clusterStrokeColor
-        .style("opacity", "0.8") // Un po' più visibile in legenda
-        .style("border-radius", "2px");
-    legendItemCluster.append("span").text("CLUSTER AREA (Selectable)");
-
-    const legendItems = legendContainer.selectAll(".legend-item-node")
-        .data(legendTypes)
-        .enter()
-        .append("div")
-        .attr("class", "legend-item legend-item-node");
-
-    legendItems.append("svg")
-        .attr("class", "legend-symbol")
-        .attr("width", 18)
-        .attr("height", 18)
-        .append("path")
-        .attr("transform", "translate(9,9)")
-        .attr("d", d => {
-            const shapeType = getShapeByType(d);
-            const symbolType = (shapeType === "diamond") ? d3.symbolDiamond : d3.symbolCircle;
-            return d3.symbol().type(symbolType).size(70)();
-        })
-        .attr("fill", d => getNodeColorByType(d))
-        .attr("stroke", d => hexToRgba(getNodeColorByType(d), 0.45))
-        .attr("stroke-width", 1);
-
-    legendItems.append("span")
-        .text(d => d === "ENTITY" ? "KEYWORD" : d);
-
-    legendContainer.append("div")
-        .style("margin-top", "10px")
-        .style("font-size", "11px")
-        .style("color", "#666")
-        .html(`Node size = total connections (degree)`);
 
     function zoomToNodes(filterFn) {
         const selected = nodes.filter(filterFn);
@@ -1646,6 +1651,9 @@ globalClusterMembers.forEach((members, clusterId) => {
         if (zoomInContainer) zoomInContainer.classList.remove('nav-hidden');
         const zoomOutContainer = document.getElementById("zoom-out-container");
         if (zoomOutContainer) zoomOutContainer.classList.remove('nav-hidden');
+        const themeToggleContainer = document.getElementById("theme-toggle-container");
+        if (themeToggleContainer) themeToggleContainer.classList.remove('nav-hidden');
+        alignSideButtons();
     }
 
     // Funzione per calcolare la distanza dinamica degli archi
@@ -1670,10 +1678,22 @@ globalClusterMembers.forEach((members, clusterId) => {
             return 35;
         }
 
-        // 3. Struttura Gerarchica Standard
         const rSource = getNodeVisualRadius(d.source || {});
         const rTarget = getNodeVisualRadius(d.target || {});
-        return 140 + rSource + rTarget;
+
+        // 3. Subject <-> Position (Distanza Semantica)
+        // Avvicina le posizioni più "forti" (più argomenti), allontana quelle marginali.
+        if ((sType === "SUBJECT" && tType === "POSITION") || (sType === "POSITION" && tType === "SUBJECT")) {
+            const posNode = sType === "POSITION" ? d.source : d.target;
+            const degree = posNode.degree || 0;
+            
+            // Formula: Base 180px - (12px * degree). Minimo 60px.
+            const semanticSpacing = Math.max(60, 160 - (degree * 15));
+            return semanticSpacing + rSource + rTarget;
+        }
+
+        // 4. Struttura Gerarchica Standard (Fallback)
+        return 100 + rSource + rTarget;
     }
 
     // Init
@@ -1797,6 +1817,30 @@ globalClusterMembers.forEach((members, clusterId) => {
         document.addEventListener("click", () => exportMenu.classList.remove("active"));
     }
 
+    // --- THEME TOGGLE LOGIC ---
+    const themeSettingsBtn = document.getElementById("theme-settings-btn");
+    const themeSwitchWrapper = document.getElementById("theme-switch-wrapper");
+    const darkModeToggle = document.getElementById("dark-mode-toggle");
+
+    if (themeSettingsBtn && themeSwitchWrapper) {
+        themeSettingsBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            themeSwitchWrapper.classList.toggle("active");
+        });
+        document.addEventListener("click", () => themeSwitchWrapper.classList.remove("active"));
+        themeSwitchWrapper.addEventListener("click", (e) => e.stopPropagation());
+    }
+
+    if (darkModeToggle) {
+        darkModeToggle.addEventListener("change", (e) => {
+            if (e.target.checked) {
+                document.body.classList.add("dark-mode");
+            } else {
+                document.body.classList.remove("dark-mode");
+            }
+        });
+    }
+
     window.exportGraph = function(type) {
         const svgEl = document.getElementById("graph");
         const serializer = new XMLSerializer();
@@ -1896,10 +1940,13 @@ globalClusterMembers.forEach((members, clusterId) => {
         if (zoomInContainer) zoomInContainer.classList.add('nav-hidden'); // Nascondi zoom in
         const zoomOutContainer = document.getElementById("zoom-out-container");
         if (zoomOutContainer) zoomOutContainer.classList.add('nav-hidden'); // Nascondi zoom out
+        const themeToggleContainer = document.getElementById("theme-toggle-container");
+        if (themeToggleContainer) themeToggleContainer.classList.add('nav-hidden'); // Nascondi theme toggle
         currentStep = 0;
         updateTutorial();
         collapseInfoPanel();
         updateSimulationCenter(true);
+        alignSideButtons();
     });
 
     // --- TIME PLAYER LOGIC ---
@@ -1956,9 +2003,6 @@ globalClusterMembers.forEach((members, clusterId) => {
             currentTime = parseInt(ts);
             updateTimeUI();
             updateGraphDepth(currentDepthLevel, true); // Aggiorna visualizzazione con nuovo tempo
-            if (simulation) {
-                simulation.alpha(0.2).restart(); // Leggero riavvio della simulazione
-            }
             isTimelineUpdate = false;
         }
 
@@ -2089,13 +2133,19 @@ globalClusterMembers.forEach((members, clusterId) => {
     // --- SUGGESTED VIEWS LOGIC ---
     const toggleContested = document.getElementById("toggle-contested");
     const toggleLone = document.getElementById("toggle-lone");
+    const toggleShared = document.getElementById("toggle-shared");
 
     function handleSuggestedView(viewType, isActive) {
         // Mutual exclusivity: Uncheck the other toggle
         if (viewType === 'contested' && isActive) {
             if (toggleLone) toggleLone.checked = false;
+            if (toggleShared) toggleShared.checked = false;
         } else if (viewType === 'lone' && isActive) {
             if (toggleContested) toggleContested.checked = false;
+            if (toggleShared) toggleShared.checked = false;
+        } else if (viewType === 'shared' && isActive) {
+            if (toggleContested) toggleContested.checked = false;
+            if (toggleLone) toggleLone.checked = false;
         }
 
         if (!isActive) {
@@ -2145,6 +2195,21 @@ globalClusterMembers.forEach((members, clusterId) => {
                 });
             }
 
+        } else if (viewType === 'shared') {
+            // Trova tutte le Keywords (ENTITY) che collegano più di un contributo (ponte semantico globale)
+            nodes.forEach(n => {
+                if (titleAccessorGlobal(n) === "ENTITY" && (n.degree || 0) > 1) {
+                    targetIds.add(n.id);
+                    // Aggiungiamo i vicini per mostrare visivamente cosa viene collegato
+                    globalEdges.forEach(e => {
+                        const s = e.source.id || e.source;
+                        const t = e.target.id || e.target;
+                        if (s === n.id) targetIds.add(t);
+                        if (t === n.id) targetIds.add(s);
+                    });
+                }
+            });
+
         } else if (viewType === 'lone') {
              // Find Positions with NO arguments (only Subject connection)
              nodes.forEach(n => {
@@ -2169,8 +2234,12 @@ globalClusterMembers.forEach((members, clusterId) => {
     if (toggleLone) {
         toggleLone.addEventListener("change", (e) => handleSuggestedView('lone', e.target.checked));
     }
+    if (toggleShared) {
+        toggleShared.addEventListener("change", (e) => handleSuggestedView('shared', e.target.checked));
+    }
 
     updateTutorial();
+    alignSideButtons();
 
 }).catch(error => {
     console.error("Error loading CSV files:", error);
