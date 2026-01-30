@@ -7,7 +7,7 @@ let simulation = null;
 const tooltip = d3.select("#tooltip");
 
 let interactive = false;
-let currentDepthLevel = 3; // Start at max depth
+let currentDepthLevel = 3; // Start at max depth (bottom 3 step filter)
 let revealedNodes = new Set(); // Track manually expanded nodes
 let authorMap = new Map(); // To cache author details
 let tutorialSteps = [];
@@ -26,7 +26,9 @@ const labelGroup = g.append("g").attr("class", "labels");
 const zoom = d3.zoom()
     .scaleExtent([0.1, 4])
     .on("zoom", (event) => {
-        if (!interactive) return;
+        // Blocca solo se non è interattivo E l'evento è generato dall'utente (mouse/touch).
+        // Se event.sourceEvent è null, è uno zoom programmatico (tutorial) e deve passare.
+        if (!interactive && event.sourceEvent) return;
         g.attr("transform", event.transform);
         if (updateMinimapViewport) updateMinimapViewport(event.transform);
     });
@@ -97,7 +99,7 @@ let timeDomain = [0, 0];
 let currentTime = 0;
 let isPlaying = false;
 let playInterval;
-const animationDuration = 10000;
+let animationDuration = 10000; // Default, will be recalculated based on data
 let isTimelineUpdate = false;
 
 // Placeholder per updateGraphDepth (verrà sovrascritta dopo il caricamento dati)
@@ -274,6 +276,12 @@ Promise.all([
     timeDomain = [minTs === Infinity ? 0 : minTs, maxTs === -Infinity ? 0 : maxTs];
     currentTime = timeDomain[1]; // Inizia alla fine (tutto visibile)
 
+    // --- CALCOLO DURATA PROPORZIONALE ---
+    // 1 giorno di dibattito = 1 secondo di animazione (1000ms)
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
+    const debateDays = (timeDomain[1] - timeDomain[0]) / MS_PER_DAY;
+    animationDuration = Math.min(90000, Math.max(5000, debateDays * 1000));
+
     titleAccessorGlobal = d => d.title || d.detail__title || "Untitled";
     const titleAccessor = titleAccessorGlobal;
 
@@ -292,19 +300,21 @@ Promise.all([
     // Aggiorna riferimento globale
     globalEdges = cleanedEdges;
 
-    // Network Palette
+    // --- Network Palette (Linked to CSS Variables) ---
+    const rootStyle = getComputedStyle(document.documentElement);
+    const getCV = (name) => rootStyle.getPropertyValue(name).trim();
+
     const colorMap = {
-        "SUBJECT": "#3f88c5",
-        "POSITION": "#F49D37",
-        "INFAVOR": "#00cc66",
-        "AGAINST": "#db3a34",
-        "ENTITY": "#b38cb4",
-        "ARGUMENT": "#e377c2",
-        "default": "#7f7f7f"
+        "SUBJECT":  getCV('--color-subject')  || "#3f88c5",
+        "POSITION": getCV('--color-position') || "#F49D37",
+        "INFAVOR":  getCV('--color-infavor')  || "#00cc66",
+        "AGAINST":  getCV('--color-against')  || "#db3a34",
+        "ENTITY":   getCV('--color-keyword')  || "#321325",
+        "default":  "#7f7f7f"
     };
 
-    const clusterFillColor = "#e2e8f0"; // Grigio chiaro azzurrato
-    const clusterStrokeColor = "#94a3b8"; // Bordo più scuro coordinato
+    const clusterFillColor = "#d0e0f5"; // Grigio chiaro azzurrato (più saturo)
+    const clusterStrokeColor = "#7b91b3"; // Bordo più scuro coordinato (più saturo)
 
     function getClusterColor(d) {
         const members = globalClusterMembers.get(d.id) || [];
@@ -318,11 +328,11 @@ Promise.all([
         });
 
         if (inFavor > against) {
-            return { fill: "#dcfce7", stroke: "#86efac" }; // Verde tenue
+            return { fill: "#c8f7d8", stroke: "#6ee7b7" }; // Verde tenue (più saturo)
         } else if (against > inFavor) {
-            return { fill: "#fee2e2", stroke: "#fca5a5" }; // Rosso tenue
+            return { fill: "#fecaca", stroke: "#fb7185" }; // Rosso tenue (più saturo)
         }
-        return { fill: clusterFillColor, stroke: clusterStrokeColor };
+        return { fill: clusterFillColor, stroke: clusterStrokeColor }; // Bilanciato (più saturo)
     }
 
     function getNodeColorByType(type) {
@@ -436,7 +446,6 @@ globalClusterMembers.forEach((members, clusterId) => {
 
     // --- EVENT HANDLERS DEFINITIONS ---
     function handleNodeMouseOver(event, d) {
-        if (!interactive) return;
         tooltip.style("opacity", 1).html(buildTooltipHTML(d));
         moveTooltip(event);
 
@@ -461,12 +470,10 @@ globalClusterMembers.forEach((members, clusterId) => {
     }
 
     function handleNodeMouseMove(event) {
-        if (!interactive) return;
         moveTooltip(event);
     }
 
     function handleNodeMouseOut(event, d) {
-        if (!interactive) return;
         tooltip.style("opacity", 0);
 
         if (titleAccessorGlobal(d) === "ENTITY" && d.detail__value) {
@@ -569,29 +576,28 @@ globalClusterMembers.forEach((members, clusterId) => {
     }
 
     function handleHullMouseOver(event, d) {
-        if (!interactive) return;
         tooltip.style("opacity", 1).html(`<strong>CLUSTER</strong><br/>${d.detail__tagline || ""}`);
         moveTooltip(event);
 
         const currentOpacity = parseFloat(d3.select(this).attr("fill-opacity"));
         if (currentOpacity > 0.05) {
             d3.select(this)
-                .attr("fill-opacity", 0.4)
-                .attr("stroke-opacity", 0.9);
+                .attr("fill-opacity", 0.5) // Aumentata opacità hover
+                .attr("stroke-opacity", 1.0); // Aumentata opacità hover
         }
     }
 
     function handleHullMouseMove(event) {
-        if (interactive) moveTooltip(event);
+        moveTooltip(event);
     }
 
     function handleHullMouseOut() {
-        if (interactive) tooltip.style("opacity", 0);
+        tooltip.style("opacity", 0);
         const currentOpacity = parseFloat(d3.select(this).attr("fill-opacity"));
         if (currentOpacity > 0.05) {
             d3.select(this)
-                .attr("fill-opacity", 0.25)
-                .attr("stroke-opacity", 0.75);
+                .attr("fill-opacity", 0.35) // Ripristinata opacità normale
+                .attr("stroke-opacity", 0.85); // Ripristinata opacità normale
         }
     }
 
@@ -627,8 +633,8 @@ globalClusterMembers.forEach((members, clusterId) => {
         .attr("class", "hull")
         .attr("fill", d => getClusterColor(d).fill)
         .attr("stroke", d => getClusterColor(d).stroke)
-        .attr("fill-opacity", 0.25)
-        .attr("stroke-opacity", 0.75)
+        .attr("fill-opacity", 0.35) // Aumentata opacità
+        .attr("stroke-opacity", 0.85) // Aumentata opacità
         .on("click", handleHullClick)
         .on("mouseover", handleHullMouseOver)
         .on("mousemove", handleHullMouseMove)
@@ -709,8 +715,6 @@ globalClusterMembers.forEach((members, clusterId) => {
 
     // --- FUNZIONE GESTIONE LIVELLI (REDEFINED) ---
     window.updateGraphDepth = function (level, keepRevealed = false) {
-        if (!interactive) return;
-
         // Reset manual expansion only if triggered by nav bar (not by node click)
         if (!keepRevealed) {
             currentDepthLevel = level;
@@ -884,7 +888,7 @@ globalClusterMembers.forEach((members, clusterId) => {
             .attr("stroke", d => getClusterColor(d).stroke)
             .attr("fill-opacity", 0.25)
             .attr("stroke-opacity", 0.75)
-            .style("opacity", hullOpacity)
+            .style("opacity", hullOpacity) // L'opacità iniziale è gestita qui
             .style("pointer-events", function(d) {
                 return hullOpacity(d) == 0 ? "none" : "all";
             })
@@ -1031,8 +1035,17 @@ globalClusterMembers.forEach((members, clusterId) => {
         labelGroup.selectAll(".entity-perm-label")
             .attr("transform", d => `translate(${d.x},${d.y})`);
 
-        // OTTIMIZZAZIONE: Calcola gli Hull solo ogni 3 tick per risparmiare CPU
-        if (tickCount % 3 === 0) {
+        // --- ADAPTIVE HULL REFRESH ---
+        // Ottimizziamo il calcolo dei poligoni (hull) in base all'attività della simulazione.
+        // Quando i nodi si muovono velocemente (alpha alto), aggiorniamo spesso.
+        // Quando rallentano, riduciamo la frequenza per risparmiare CPU.
+        const alpha = simulation.alpha();
+        let hullModulo = 1;
+        if (alpha > 0.1) hullModulo = 2;       // Movimento rapido: ogni 2 tick
+        else if (alpha > 0.03) hullModulo = 8; // Movimento rallentato: ogni 8 tick
+        else hullModulo = 24;                 // Quasi statico: ogni 24 tick
+
+        if (tickCount % hullModulo === 0 || alpha <= simulation.alphaMin() + 0.001) {
             hulls.attr("d", d => getHullPath(d));
         }
 
@@ -1525,15 +1538,27 @@ globalClusterMembers.forEach((members, clusterId) => {
             return;
         }
 
-        const targetNodes = globalNodes.filter(d => {
-            const t = titleAccessorGlobal(d);
-            if (type === "SUBJECT") return t === "SUBJECT";
-            if (type === "POSITION") return t === "POSITION";
-            if (type === "INFAVOR_AGAINST") return t === "INFAVOR" || t === "AGAINST";
-            if (type === "CLUSTER") return t === "CLUSTER";
-            if (type === "ENTITY") return t === "ENTITY";
-            return false;
-        });
+        let targetNodes = [];
+
+        if (type === "OUTDEGREE") {
+            // Seleziona solo i nodi POSITION, ordinali per grado e prendi i due estremi
+            const positions = globalNodes.filter(n => titleAccessorGlobal(n) === "POSITION");
+            if (positions.length > 0) {
+                positions.sort((a, b) => (b.degree || 0) - (a.degree || 0));
+                targetNodes.push(positions[0]); // Il più grande
+                if (positions.length > 1) targetNodes.push(positions[positions.length - 1]); // Il più piccolo
+            }
+        } else {
+            targetNodes = globalNodes.filter(d => {
+                const t = titleAccessorGlobal(d);
+                if (type === "SUBJECT") return t === "SUBJECT";
+                if (type === "POSITION") return t === "POSITION";
+                if (type === "INFAVOR_AGAINST") return t === "INFAVOR" || t === "AGAINST";
+                if (type === "CLUSTER") return t === "CLUSTER";
+                if (type === "ENTITY") return t === "ENTITY";
+                return false;
+            });
+        }
 
         if (targetNodes.length > 0) {
             const targetIds = new Set(targetNodes.map(n => n.id));
@@ -1844,41 +1869,71 @@ globalClusterMembers.forEach((members, clusterId) => {
     window.exportGraph = function(type) {
         const svgEl = document.getElementById("graph");
         const serializer = new XMLSerializer();
+
+        // 1. Calcola i confini di TUTTA la rete (non solo la vista corrente)
+        const padding = 60;
+        const nodesForBounds = globalNodes.filter(d => d.x !== undefined);
+        if (nodesForBounds.length === 0) return;
+
+        const xMin = d3.min(nodesForBounds, d => d.x - 50);
+        const yMin = d3.min(nodesForBounds, d => d.y - 50);
+        const xMax = d3.max(nodesForBounds, d => d.x + 50);
+        const yMax = d3.max(nodesForBounds, d => d.y + 50);
         
-        // Clone per non sporcare l'originale
+        const bW = (xMax - xMin) || 100;
+        const bH = (yMax - yMin) || 100;
+
+        // 2. Prepara il clone dell'SVG
         const clone = svgEl.cloneNode(true);
-        
-        // Includiamo gli stili CSS necessari per il rendering corretto
+        clone.setAttribute("viewBox", `${xMin - padding} ${yMin - padding} ${bW + padding * 2} ${bH + padding * 2}`);
+        clone.setAttribute("width", bW + padding * 2);
+        clone.setAttribute("height", bH + padding * 2);
+
+        // 3. Iniezione stili espliciti (risolve il problema dei cerchi neri e variabili CSS)
         const style = document.createElement("style");
         style.textContent = `
             .node { stroke-width: 2px; }
-            .link { stroke: #bbb; }
-            .node-label { font-family: sans-serif; font-size: 10px; fill: #444; }
+            .link { stroke: #bbb; stroke-linecap: round; }
+            .node-label { font-family: 'Inter', sans-serif; font-size: 10px; fill: #666; }
             .hull { stroke-width: 1px; fill-opacity: 0.25; }
+            .selection-ring { 
+                fill: none !important; 
+                stroke: #007AFF !important; 
+                stroke-width: 1.5px !important; 
+                stroke-dasharray: 8, 4 !important; 
+            }
+            /* Assicura che i colori dei nodi siano preservati */
+            path[fill^="rgba"] { fill-opacity: 1; }
         `;
         clone.prepend(style);
 
         const svgData = serializer.serializeToString(clone);
-        const fileName = `knowledge-graph-${new Date().getTime()}`;
+        const fileName = `knowledge-graph-export`;
 
         if (type === 'svg') {
             const blob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
             const url = URL.createObjectURL(blob);
             download(url, `${fileName}.svg`);
         } else {
+            // 4. Rendering ad alta risoluzione (2.5K)
+            const exportWidth = 2560; 
+            const aspectRatio = (bH + padding * 2) / (bW + padding * 2);
+            const exportHeight = exportWidth * aspectRatio;
+
             const canvas = document.createElement("canvas");
+            canvas.width = exportWidth;
+            canvas.height = exportHeight;
             const ctx = canvas.getContext("2d");
+
             const img = new Image();
-            const svgBlob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
+            const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
             const url = URL.createObjectURL(svgBlob);
 
             img.onload = () => {
-                canvas.width = width;
-                canvas.height = height;
-                ctx.fillStyle = "white";
+                ctx.fillStyle = document.body.classList.contains("dark-mode") ? "#121212" : "#f8f8f8";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0);
-                download(canvas.toDataURL("image/png"), `${fileName}.png`);
+                ctx.drawImage(img, 0, 0, exportWidth, exportHeight);
+                download(canvas.toDataURL("image/png", 1.0), `${fileName}.png`);
                 URL.revokeObjectURL(url);
             };
             img.src = url;
@@ -1897,7 +1952,7 @@ globalClusterMembers.forEach((members, clusterId) => {
     // Avvia il tutorial dopo che la simulazione ha fatto i primi calcoli
     setTimeout(() => {
         updateTutorial();
-        interactive = true;
+        interactive = false;
     }, 500); // Attendi 500ms (abbastanza per 30 tick a 60FPS)
 
     tutorialNext.addEventListener("click", () => {
@@ -1923,6 +1978,7 @@ globalClusterMembers.forEach((members, clusterId) => {
     tutorialToggle.addEventListener("click", () => {
         tutorialSidebar.classList.remove('tutorial-closed');
         tutorialToggle.style.display = "none";
+        interactive = false;
         depthNav.classList.add('nav-hidden'); // Nascondi navbar
         const timelinePanel = document.getElementById("timeline-panel");
         if (timelinePanel) timelinePanel.classList.add('nav-hidden'); // Nascondi timeline

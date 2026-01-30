@@ -53,24 +53,28 @@
 
         <!-- TIMELINE PLAYER  -->
         <div id="timeline-panel" class="nav-hidden">
-            <div class="timeline-info">
-                <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                </svg>
-                <div class="timeline-tooltip-text">Observe how the discussion evolves over time.</div>
-            </div>
-            <button id="play-btn" class="time-btn">
-                <svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor">
-                    <path d="M5 3l14 9-14 9V3z"></path>
-                </svg>
-            </button>
-            <div class="time-slider-wrapper">
+            <div class="timeline-header">
                 <div class="timeline-title">Timeline</div>
-                <span id="time-date">Start</span>
-                <div id="timeline-chart"></div>
-                <input type="range" id="time-slider" min="0" max="100" value="100" step="1">
+                <div id="time-date">Start</div>
+                <div class="timeline-info">
+                    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <div class="timeline-tooltip-text">Observe how the discussion evolves over time.</div>
+                </div>
+            </div>
+            <div class="timeline-controls">
+                <button id="play-btn" class="time-btn">
+                    <svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor">
+                        <path d="M5 3l14 9-14 9V3z"></path>
+                    </svg>
+                </button>
+                <div class="time-slider-wrapper">
+                    <div id="timeline-chart"></div>
+                    <input type="range" id="time-slider" min="0" max="100" value="100" step="1">
+                </div>
             </div>
         </div>
 
@@ -216,7 +220,7 @@
                     <div class="section-title">How to read</div>
                     <div class="legend-item">
                         <div class="legend-symbol"><svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></div>
-                        <div class="legend-label-group"><span class="label-main">Size</span><span class="label-sub">Connections</span></div>
+                        <div class="legend-label-group"><span class="label-main">Size</span><span class="label-sub">Number of connections</span></div>
                     </div>
                     <div class="legend-item">
                         <div class="legend-symbol"><svg viewBox="0 0 18 18"><circle cx="6" cy="9" r="2.5" fill="currentColor"/><circle cx="12" cy="9" r="2.5" fill="currentColor"/></svg></div>
@@ -224,11 +228,11 @@
                     </div>
                     <div class="legend-item">
                         <div class="legend-symbol"><svg viewBox="0 0 18 18"><line x1="3" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="2"/></svg></div>
-                        <div class="legend-label-group"><span class="label-main">Solid Line</span><span class="label-sub">Direct</span></div>
+                        <div class="legend-label-group"><span class="label-main">Solid Line</span><span class="label-sub">Human-contribution link</span></div>
                     </div>
                     <div class="legend-item">
                         <div class="legend-symbol"><svg viewBox="0 0 18 18"><line x1="3" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="2" stroke-dasharray="3,2"/></svg></div>
-                        <div class="legend-label-group"><span class="label-main">Dashed Line</span><span class="label-sub">Keyword</span></div>
+                        <div class="legend-label-group"><span class="label-main">Dashed Line</span><span class="label-sub">AI-generated link</span></div>
                     </div>
                 </div>
             </div>

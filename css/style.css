@@ -29,7 +29,7 @@
     --color-position: #F49D37;
     --color-infavor: #00cc66;
     --color-against: #db3a34;
-    --color-keyword: #b38cb4;
+    --color-keyword: #B38CB4;
     --color-cluster-fill: #e2e8f0;
     --color-cluster-stroke: #94a3b8;
 
@@ -102,7 +102,7 @@ body {
     top: 20px;
     right: 20px;
     bottom: 20px;
-    width: 360px;
+    width: 320px;
     /* Larghezza fissa */
 
     /* Il container è trasparente, contiene le cards */
@@ -276,6 +276,7 @@ svg {
     max-width: 260px;
     line-height: 1.3;
     box-shadow: none;
+    z-index: 10001;
 }
 
 .entity-perm-label text {
@@ -292,7 +293,7 @@ svg {
 #legend-card {
     pointer-events: auto;
     /* Riabilita click */
-    padding: 20px;
+    padding: 0;
     flex-shrink: 0;
     overflow: hidden;
     max-height: 600px; /* Valore alto per contenere tutto */
@@ -401,23 +402,25 @@ svg {
 
 /* legenda */
 #legend-title {
+    background: var(--c-bg-inset);
+    padding: 6px 8px;
     font-family: var(--font-mono);
-    font-size: var(--fs-h2);
-    font-weight: var(--fw-bold);
-    text-transform: uppercase;
-    letter-spacing: auto;
-    margin: 0 0 12px 0;
+    font-size: var(--fs-tiny);
     color: var(--c-text-primary);
+    border-bottom: 1px solid var(--c-border);
+    text-transform: uppercase;
+    font-weight: var(--fw-bold);
+    margin: 0;
 }
 
 #legend-card {
-    padding-bottom: 8px;
     border-bottom: 1px solid var(--c-border);
     color: var(--c-text-primary);
 }
 
 .legend-section {
-    margin-bottom: 16px;
+    padding: 12px 12px 4px 12px;
+    margin-bottom: 0;
 }
 
 .legend-section:last-child {
@@ -479,7 +482,7 @@ svg {
 /* Separatore */
 .legend-divider {
     border-top: 1px solid var(--c-border);
-    margin: 12px 0;
+    margin: 0;
 }
 
 /* Tutorial sidebar styles */
@@ -596,7 +599,7 @@ svg {
     border-radius: 2px; /* Square technical look */
     cursor: pointer;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--fs-small);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     transition: all 0.2s;
@@ -650,12 +653,14 @@ svg {
 /* Pulsante per riaprire il tutorial */
 #tutorial-toggle {
     position: absolute;
-    left: 12px;
-    top: 12px;
+    left: 20px;
+    top: 20px;
     z-index: 9000;
     padding: 8px 12px;
+    width: 200px;
     font-family: var(--font-mono);
     font-size: var(--fs-tiny);
+    font-weight: var(--fw-medium);
     text-transform: uppercase;
     border-radius: 2px;
     border: 1px solid var(--c-border-strong);
@@ -664,6 +669,7 @@ svg {
     cursor: pointer;
     display: none;
     transition: all 0.2s;
+    text-align: center;
 }
 
 #tutorial-toggle:hover {
@@ -716,9 +722,8 @@ svg {
     transform: translateX(-50%);
     z-index: 8000;
     display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 16px;
+    flex-direction: column;
+    padding: 0;
     width: 400px;
     background: var(--c-bg-panel);
     border: 1px solid var(--c-border-strong);
@@ -727,21 +732,36 @@ svg {
     transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
+.timeline-header {
+    background: var(--c-bg-inset);
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--c-border);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    width: 100%;
+}
+
+.timeline-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 8px;
+}
+
 .timeline-title {
     font-family: var(--font-mono);
     font-size: var(--fs-tiny);
     font-weight: var(--fw-bold);
-    color: var(--c-text-muted);
-    letter-spacing: 0.1em;
+    color: var(--c-text-secondary);
     text-transform: uppercase;
-    margin-bottom: 2px;
-    text-align: center;
+    margin: 0;
+    text-align: left;
 }
 
 .timeline-info {
-    position: absolute;
-    top: 8px;
-    right: 8px;
+    position: relative;
+    justify-self: end;
     cursor: help;
     color: var(--c-text-muted);
     display: flex;
@@ -758,20 +778,19 @@ svg {
 .timeline-tooltip-text {
     visibility: hidden;
     width: 180px;
-    background-color: var(--c-text-primary);
-    color: var(--c-bg-panel);
-    text-align: center;
+    background: var(--c-bg-panel);
+    color: var(--c-text-primary);
+    text-align: left;
     border-radius: 0;
-    padding: 8px;
+    padding: 8px 12px;
     position: absolute;
-    z-index: 1000;
-    top: 140%; /* Spostato sotto l'icona per evitare il margine superiore */
-    left: 50%;
+    z-index: 10001;
+    top: 18px;
+    left: 10px;
     opacity: 0;
     transition: opacity 0.3s;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    text-transform: uppercase;
+    font-size: 11px;
+    text-transform: none;
     font-weight: 400;
     pointer-events: none;
     line-height: 1.3;
@@ -832,11 +851,11 @@ svg {
 
 #time-date {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-tiny);
     font-weight: var(--fw-bold);
     color: var(--c-text-primary);
     text-transform: uppercase;
-    margin-bottom: 2px;
+    margin: 0;
     text-align: center;
 }
 
@@ -865,7 +884,7 @@ svg {
 
 #timeline-cursor {
     position: absolute;
-    top: 25px; /* Start below the date label */
+    top: 0px; /* Start below the date label */
     bottom: 6px; /* End at the center of the slider thumb */
     width: 1px;
     background-color: var(--c-border-strong);
@@ -1193,6 +1212,7 @@ input:checked + .slider:before {
     transition: opacity 0.2s;
     pointer-events: none;
     border: 1px solid var(--c-border);
+    z-index: 10001;
 }
 
 #reset-view-btn:hover + .reset-tooltip,
