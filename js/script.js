@@ -7,6 +7,7 @@ let simulation = null;
 const tooltip = d3.select("#tooltip");
 
 let interactive = false;
+let isDrawingMode = false; // Global state for drawing mode
 let currentDepthLevel = 3; // Start at max depth (bottom 3 step filter)
 let revealedNodes = new Set(); // Track manually expanded nodes
 let authorMap = new Map(); // To cache author details
@@ -22,6 +23,8 @@ const hullGroup = g.append("g").attr("class", "hulls");
 const linkGroup = g.append("g").attr("class", "links");
 const nodeGroup = g.append("g").attr("class", "nodes");
 const labelGroup = g.append("g").attr("class", "labels");
+const postitGroup = g.append("g").attr("class", "postits"); // Layer for post-its
+const drawingGroup = g.append("g").attr("class", "drawings").lower(); // Layer for drawings (below nodes/postits)
 
 const zoom = d3.zoom()
     .scaleExtent([0.1, 4])
@@ -32,6 +35,15 @@ const zoom = d3.zoom()
         g.attr("transform", event.transform);
         if (updateMinimapViewport) updateMinimapViewport(event.transform);
     });
+
+// Apply zoom filter to disable panning when drawing
+zoom.filter((event) => {
+    // If drawing mode is active and event is mousedown/touchstart, ignore zoom (allow drawing)
+    if (typeof isDrawingMode !== 'undefined' && isDrawingMode && (event.type === 'mousedown' || event.type === 'touchstart')) return false;
+    
+    // Allow wheel events even with Ctrl key (fixes pinch-to-zoom on trackpads), block secondary buttons
+    return (!event.button && (event.type === 'wheel' || !event.ctrlKey));
+});
 
 svg.call(zoom);
 
@@ -53,12 +65,22 @@ function alignSideButtons() {
     const mStyle = window.getComputedStyle(minimap);
     const mHeight = parseFloat(mStyle.height);
     const mBottom = parseFloat(mStyle.bottom); 
+    
+    // Align side controls to the right of minimap
+    // Note: add-postit-container is manually positioned above suggested views, 
+    // so we exclude it from this specific stack calculation if we want it separate, 
+    // but if included in btnIds it will be stacked. 
+    // Given the request "sopra le suggested-view", we should probably handle it separately 
+    // or let CSS handle it. The CSS provided sets a fixed bottom for postit container.
+    // Let's filter it out from this stack logic to respect the CSS position.
+    const stackButtons = buttons;
+    
     const mLeft = parseFloat(mStyle.left) + parseFloat(mStyle.width) + 10;
 
-    const btnHeight = buttons[0].offsetHeight || 36; 
-    const numButtons = buttons.length;
+    const btnHeight = stackButtons[0].offsetHeight || 36; 
+    const numButtons = stackButtons.length;
 
-    buttons.forEach((btn, i) => {
+    stackButtons.forEach((btn, i) => {
         const posBottom = mBottom + (i * (mHeight - btnHeight) / (numButtons - 1));
         btn.style.bottom = `${posBottom}px`;
         btn.style.left = `${mLeft}px`;
@@ -1041,7 +1063,10 @@ globalClusterMembers.forEach((members, clusterId) => {
         // Quando rallentano, riduciamo la frequenza per risparmiare CPU.
         const alpha = simulation.alpha();
         let hullModulo = 1;
-        if (alpha > 0.1) hullModulo = 2;       // Movimento rapido: ogni 2 tick
+        
+        // Force frequent updates during playback to ensure responsiveness
+        if (isPlaying) hullModulo = 1;
+        else if (alpha > 0.1) hullModulo = 2;       // Movimento rapido: ogni 2 tick
         else if (alpha > 0.03) hullModulo = 8; // Movimento rallentato: ogni 8 tick
         else hullModulo = 24;                 // Quasi statico: ogni 24 tick
 
@@ -1067,13 +1092,15 @@ globalClusterMembers.forEach((members, clusterId) => {
     function dragBehaviour() {
         function dragstarted(event, d) {
             if (!interactive) return;
-            if (!event.active) simulation.alphaTarget(0.3).restart();
+            // Physics update removed from start to avoid waking up simulation on click/hold
             d.fx = d.x;
             d.fy = d.y;
         }
 
         function dragged(event, d) {
             if (!interactive) return;
+            // Physics update happens only when actually dragging
+            simulation.alphaTarget(0.3).restart();
             d.fx = event.x;
             d.fy = event.y;
         }
@@ -1134,7 +1161,16 @@ globalClusterMembers.forEach((members, clusterId) => {
             .style("top", y + "px");
     }
 
-    svg.on("click", () => {
+    svg.on("click", (event) => {
+        if (event.defaultPrevented) return; // Prevent physics update if panning/zooming
+
+        if (isAddingPostit) {
+            const coords = d3.pointer(event, g.node());
+            createPostit(coords[0], coords[1]);
+            togglePostitMode(false);
+            return;
+        }
+
         if (!interactive) return;
         clearNodeDetails();
         resetHighlight();
@@ -1402,7 +1438,8 @@ globalClusterMembers.forEach((members, clusterId) => {
                         simulation.force("collision", collisionForce);
 
                         // NUOVO: Aggiorna le distanze dei link ora che ent._open è true
-                        simulation.force("link").links(edges);
+                        // FIX: Usa i link correnti della simulazione, non 'edges' raw
+                        simulation.force("link").links(simulation.force("link").links());
 
                         simulation.alpha(0.1).restart();
                     }
@@ -1428,7 +1465,8 @@ globalClusterMembers.forEach((members, clusterId) => {
             collisionForce.radius(d => (getNodeVisualRadius(d) + 5 + (d._extraCollision || 0)));
             if (simulation) {
                 simulation.force("collision", collisionForce);
-                simulation.force("link").links(edges);
+                // FIX: Usa i link correnti della simulazione, non 'edges' raw
+                simulation.force("link").links(simulation.force("link").links());
                 simulation.alpha(0.05).restart();
             }
         }
@@ -1678,6 +1716,8 @@ globalClusterMembers.forEach((members, clusterId) => {
         if (zoomOutContainer) zoomOutContainer.classList.remove('nav-hidden');
         const themeToggleContainer = document.getElementById("theme-toggle-container");
         if (themeToggleContainer) themeToggleContainer.classList.remove('nav-hidden');
+        const personalNotesContainer = document.getElementById("personal-notes-container");
+        if (personalNotesContainer) personalNotesContainer.classList.remove('nav-hidden');
         alignSideButtons();
     }
 
@@ -1889,6 +1929,106 @@ globalClusterMembers.forEach((members, clusterId) => {
         clone.setAttribute("width", bW + padding * 2);
         clone.setAttribute("height", bH + padding * 2);
 
+        // CONVERSIONE POST-IT: Da HTML (foreignObject) a SVG puro per l'export
+        // Questo evita il SecurityError (tainted canvas) e permette di vedere i post-it nel PNG/SVG
+        const clonePostitGroup = clone.querySelector(".postits");
+        if (clonePostitGroup) {
+            clonePostitGroup.innerHTML = ""; // Pulisci i foreignObject clonati (che non funzionerebbero)
+
+            // Itera sui post-it REALI nel DOM per prendere dati e testo
+            document.querySelectorAll(".postit-object").forEach(realFo => {
+                // Recupera i dati D3 associati all'elemento reale
+                const d = d3.select(realFo).datum();
+                if (!d) return;
+
+                // Recupera il testo dalla textarea reale
+                const textarea = realFo.querySelector("textarea");
+                const textContent = textarea ? textarea.value : "";
+
+                // Crea gruppo SVG
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                g.setAttribute("transform", `translate(${d.x}, ${d.y})`);
+
+                // 1. Sfondo
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("width", d.width);
+                rect.setAttribute("height", d.height);
+                rect.setAttribute("fill", "#FFE880");
+                rect.setAttribute("stroke", "#F0DA78");
+                rect.setAttribute("stroke-width", "1");
+                g.appendChild(rect);
+
+                // 2. Header
+                const header = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                header.setAttribute("width", d.width);
+                header.setAttribute("height", 16);
+                header.setAttribute("fill", "#F0DA78");
+                g.appendChild(header);
+
+                // 3. Testo (con wrapping manuale)
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", 8);
+                text.setAttribute("y", 28);
+                text.setAttribute("font-family", "sans-serif");
+                text.setAttribute("font-size", "12");
+                text.setAttribute("fill", "#333");
+
+                const charsPerLine = Math.floor((d.width - 16) / 7); // Stima caratteri per riga
+                const paragraphs = textContent.split("\n");
+                let dy = 0;
+
+                paragraphs.forEach(para => {
+                    const words = para.split(/\s+/);
+                    let line = [];
+                    
+                    words.forEach(word => {
+                        if ((line.join(" ") + " " + word).length > charsPerLine) {
+                            const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+                            tspan.setAttribute("x", 8);
+                            tspan.setAttribute("dy", dy === 0 ? 0 : 14);
+                            tspan.textContent = line.join(" ");
+                            text.appendChild(tspan);
+                            line = [word];
+                            dy += 14;
+                        } else {
+                            line.push(word);
+                        }
+                    });
+                    // Flush last line of paragraph
+                    const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+                    tspan.setAttribute("x", 8);
+                    tspan.setAttribute("dy", dy === 0 ? 0 : 14);
+                    tspan.textContent = line.join(" ");
+                    text.appendChild(tspan);
+                    dy += 14;
+                });
+
+                g.appendChild(text);
+                clonePostitGroup.appendChild(g);
+            });
+        }
+
+        // CONVERSIONE DISEGNI: Da SVG a SVG (già vettoriale, ma assicuriamo stili)
+        const cloneDrawingGroup = clone.querySelector(".drawings");
+        if (cloneDrawingGroup) {
+            // I disegni sono già path SVG, ma dobbiamo assicurarci che gli stili CSS siano applicati inline
+            // o che la classe .drawing-path sia definita nello style block sotto.
+            // Per sicurezza, iteriamo e applichiamo attributi espliciti.
+            const realDrawings = document.querySelectorAll(".drawing-path");
+            const cloneDrawings = cloneDrawingGroup.querySelectorAll(".drawing-path");
+            
+            const isDarkMode = document.body.classList.contains("dark-mode");
+            const strokeColor = isDarkMode ? "#e0e0e0" : "#1a1a1a";
+
+            cloneDrawings.forEach((path, i) => {
+                path.setAttribute("fill", "none");
+                path.setAttribute("stroke", strokeColor);
+                path.setAttribute("stroke-width", "2");
+                path.setAttribute("stroke-linecap", "round");
+                path.setAttribute("stroke-linejoin", "round");
+            });
+        }
+
         // 3. Iniezione stili espliciti (risolve il problema dei cerchi neri e variabili CSS)
         const style = document.createElement("style");
         style.textContent = `
@@ -1998,6 +2138,9 @@ globalClusterMembers.forEach((members, clusterId) => {
         if (zoomOutContainer) zoomOutContainer.classList.add('nav-hidden'); // Nascondi zoom out
         const themeToggleContainer = document.getElementById("theme-toggle-container");
         if (themeToggleContainer) themeToggleContainer.classList.add('nav-hidden'); // Nascondi theme toggle
+        const personalNotesContainer = document.getElementById("personal-notes-container");
+        if (personalNotesContainer) personalNotesContainer.classList.add('nav-hidden');
+        
         currentStep = 0;
         updateTutorial();
         collapseInfoPanel();
@@ -2292,6 +2435,317 @@ globalClusterMembers.forEach((members, clusterId) => {
     }
     if (toggleShared) {
         toggleShared.addEventListener("change", (e) => handleSuggestedView('shared', e.target.checked));
+    }
+    
+    // --- POST-IT LOGIC ---
+    const btnAddNote = document.getElementById("btn-add-note");
+    const btnDraw = document.getElementById("btn-draw");
+    const drawingToolbar = document.getElementById("drawing-toolbar");
+    const btnDrawPencil = document.getElementById("draw-pencil");
+    const btnDrawEraser = document.getElementById("draw-eraser");
+    const btnDrawUndo = document.getElementById("draw-undo");
+    const btnDrawTrash = document.getElementById("draw-trash");
+    const btnDrawClose = document.getElementById("draw-close");
+
+    let isAddingPostit = false;
+    
+    // Create Ghost Element
+    const postitGhost = document.createElement("div");
+    postitGhost.className = "postit-ghost";
+    document.body.appendChild(postitGhost);
+
+    function togglePostitMode(forceState) {
+        isAddingPostit = forceState !== undefined ? forceState : !isAddingPostit;
+        
+        if (btnAddNote) {
+            btnAddNote.classList.toggle("active", isAddingPostit);
+        }
+
+        if (isAddingPostit) {
+            document.body.style.cursor = "crosshair";
+        } else {
+            document.body.style.cursor = "default";
+            postitGhost.style.display = "none";
+        }
+    }
+
+    if (btnAddNote) {
+        btnAddNote.addEventListener("click", (e) => {
+            e.stopPropagation(); // Prevent SVG click
+            togglePostitMode();
+        });
+    }
+
+    // --- DRAWING LOGIC ---
+    let currentTool = 'pencil'; // 'pencil' or 'eraser'
+    let drawingHistory = []; // Stack of path elements
+    let currentPath = null;
+
+    function toggleDrawingMode(active) {
+        isDrawingMode = active;
+        
+        if (active) {
+            btnDraw.style.display = "none";
+            drawingToolbar.style.display = "flex";
+            setDrawingTool('pencil');
+            document.body.style.cursor = "crosshair";
+        } else {
+            btnDraw.style.display = "flex";
+            drawingToolbar.style.display = "none";
+            document.body.style.cursor = "default";
+            // Clear drawings on exit (Trash behavior)
+            // clearDrawings(); // Removed: Close button just closes, doesn't clear automatically unless requested
+        }
+    }
+
+    function setDrawingTool(tool) {
+        currentTool = tool;
+        // Update UI
+        [btnDrawPencil, btnDrawEraser].forEach(btn => btn.classList.remove('active'));
+        if (tool === 'pencil') btnDrawPencil.classList.add('active');
+        if (tool === 'eraser') btnDrawEraser.classList.add('active');
+        
+        if (tool === 'pencil') {
+            document.body.style.cursor = "crosshair";
+        } else if (tool === 'eraser') {
+            document.body.style.cursor = "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/></svg>') 12 12, auto";
+        }
+    }
+
+    function clearDrawings() {
+        drawingGroup.selectAll("*").remove();
+        drawingHistory = [];
+    }
+
+    function undoLastDrawing() {
+        if (drawingHistory.length > 0) {
+            const lastPath = drawingHistory.pop();
+            lastPath.remove();
+        }
+    }
+
+    if (btnDraw) {
+        btnDraw.addEventListener("click", (e) => {
+            e.stopPropagation();
+            toggleDrawingMode(true);
+        });
+    }
+
+    if (btnDrawPencil) btnDrawPencil.addEventListener("click", (e) => { e.stopPropagation(); setDrawingTool('pencil'); });
+    if (btnDrawEraser) btnDrawEraser.addEventListener("click", (e) => { e.stopPropagation(); setDrawingTool('eraser'); });
+    if (btnDrawUndo) btnDrawUndo.addEventListener("click", (e) => { e.stopPropagation(); undoLastDrawing(); });
+    if (btnDrawTrash) btnDrawTrash.addEventListener("click", (e) => { e.stopPropagation(); clearDrawings(); });
+    if (btnDrawClose) btnDrawClose.addEventListener("click", (e) => { e.stopPropagation(); toggleDrawingMode(false); });
+
+    // SVG Drawing Events
+    svg.on("mousedown.draw", function(event) {
+        if (!isDrawingMode) return;
+
+        const coords = d3.pointer(event, drawingGroup.node());
+
+        if (currentTool === 'eraser') {
+            eraseAt(coords);
+            return;
+        }
+
+        if (currentTool === 'pencil') {
+            const lineGenerator = d3.line().curve(d3.curveBasis);
+            const points = [[coords[0], coords[1]]];
+
+            currentPath = drawingGroup.append("path")
+                .datum(points)
+                .attr("class", "drawing-path")
+                .attr("d", lineGenerator)
+                .attr("stroke-width", 3)
+                .attr("fill", "none");
+            
+            drawingHistory.push(currentPath.node());
+        }
+    });
+
+    svg.on("mousemove.draw", function(event) {
+        if (!isDrawingMode) return;
+
+        const coords = d3.pointer(event, drawingGroup.node());
+
+        if (currentTool === 'eraser' && event.buttons === 1) {
+            eraseAt(coords);
+            return;
+        }
+
+        if (currentTool === 'pencil' && currentPath) {
+            const points = currentPath.datum();
+            points.push([coords[0], coords[1]]);
+            
+            const lineGenerator = d3.line().curve(d3.curveBasis);
+            currentPath.attr("d", lineGenerator);
+        }
+    });
+
+    svg.on("mouseup.draw", function() {
+        currentPath = null;
+    });
+
+    function eraseAt(coords) {
+        const transform = d3.zoomTransform(svg.node());
+        const k = transform.k || 1;
+        const eraserRadius = 12 / k; // Matches visual cursor area (~12px screen radius) adjusted for zoom
+        const r2 = eraserRadius * eraserRadius;
+
+        drawingGroup.selectAll(".drawing-path").each(function(d) {
+            // d is array of points [[x,y], ...]
+            // Check if any point of the stroke is within the eraser circle
+            const hit = d.some(p => {
+                const dx = p[0] - coords[0];
+                const dy = p[1] - coords[1];
+                return (dx * dx + dy * dy) < r2;
+            });
+
+            if (hit) {
+                d3.select(this).remove();
+                const idx = drawingHistory.indexOf(this);
+                if (idx > -1) drawingHistory.splice(idx, 1);
+            }
+        });
+    }
+
+    document.addEventListener("mousemove", (e) => {
+        if (!isAddingPostit) return;
+        postitGhost.style.display = "block";
+        // Offset slightly so it doesn't block the click
+        postitGhost.style.left = (e.pageX + 15) + "px";
+        postitGhost.style.top = (e.pageY + 15) + "px";
+    });
+
+    function createPostit(x, y) {
+        const width = 140;
+        const height = 100;
+        
+        // Data object for D3 binding
+        const postitData = { x, y, width, height };
+
+        const fo = postitGroup.append("foreignObject")
+            .datum(postitData)
+            .attr("x", x)
+            .attr("y", y)
+            .attr("width", width)
+            .attr("height", height)
+            .attr("class", "postit-object");
+
+        const div = fo.append("xhtml:div")
+            .attr("class", "postit-wrapper");
+
+        // Header
+        const header = div.append("div").attr("class", "postit-header");
+        
+        // Close Button
+        header.append("span")
+            .attr("class", "postit-close")
+            .text("✕")
+            .on("click", function() {
+                fo.remove();
+            });
+
+        // Content
+        div.append("textarea")
+            .attr("class", "postit-content")
+            .attr("placeholder", "Write a note...")
+            .attr("spellcheck", "false"); // Disable spellcheck underline
+
+        // Resize Handles (Corners)
+        const handles = ["nw", "ne", "sw", "se"];
+        handles.forEach(pos => {
+            div.append("div")
+                .attr("class", `resize-handle rh-${pos}`)
+                .call(d3.drag()
+                    .on("start", function(event) {
+                        const d = postitData;
+                        d.startX = d.x;
+                        d.startY = d.y;
+                        d.startW = d.width;
+                        d.startH = d.height;
+                        // Cattura la posizione esatta del mouse nel sistema di coordinate del gruppo postit
+                        const coords = d3.pointer(event, postitGroup.node());
+                        d.pointerX = coords[0];
+                        d.pointerY = coords[1];
+                    })
+                    .on("drag", function(event) {
+                        const d = postitData;
+                        const coords = d3.pointer(event, postitGroup.node());
+                        const dx = coords[0] - d.pointerX;
+                        const dy = coords[1] - d.pointerY;
+                        
+                        let newW = d.startW;
+                        let newH = d.startH;
+                        let newX = d.startX;
+                        let newY = d.startY;
+                        
+                        if (pos.includes("e")) newW = Math.max(100, d.startW + dx);
+                        if (pos.includes("w")) {
+                            const proposedW = d.startW - dx;
+                            newW = Math.max(100, proposedW);
+                            newX = d.startX + (d.startW - newW);
+                        }
+                        if (pos.includes("s")) newH = Math.max(80, d.startH + dy);
+                        if (pos.includes("n")) {
+                            const proposedH = d.startH - dy;
+                            newH = Math.max(80, proposedH);
+                            newY = d.startY + (d.startH - newH);
+                        }
+
+                        // Update data
+                        d.width = newW;
+                        d.height = newH;
+                        d.x = newX;
+                        d.y = newY;
+
+                        // Update DOM
+                        fo.attr("width", newW).attr("height", newH)
+                          .attr("x", newX).attr("y", newY);
+                    })
+                );
+        });
+
+        // Drag Behavior for the whole post-it (via header)
+        header.call(d3.drag()
+            .on("start", function(event) {
+                const d = postitData;
+                d.startX = d.x;
+                d.startY = d.y;
+                const coords = d3.pointer(event, postitGroup.node());
+                d.pointerX = coords[0];
+                d.pointerY = coords[1];
+            })
+            .on("drag", function(event) {
+                const d = postitData;
+                const coords = d3.pointer(event, postitGroup.node());
+                d.x = d.startX + (coords[0] - d.pointerX);
+                d.y = d.startY + (coords[1] - d.pointerY);
+                fo.attr("x", d.x).attr("y", d.y);
+            })
+        );
+        
+        // Prevent zoom when interacting with post-it
+        fo.on("mousedown", (e) => e.stopPropagation())
+          .on("dblclick", (e) => e.stopPropagation());
+    }
+    
+    // Escape key to cancel
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && isAddingPostit) {
+            togglePostitMode(false);
+        }
+    });
+
+    // --- LEGEND TOGGLE ---
+    const legendToggleBtn = document.getElementById("legend-toggle-btn");
+    const legendCard = document.getElementById("legend-card");
+    
+    if (legendToggleBtn && legendCard) {
+        legendToggleBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            legendCard.classList.toggle("minimized");
+        });
     }
 
     updateTutorial();
