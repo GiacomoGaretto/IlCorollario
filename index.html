@@ -78,6 +78,58 @@
             </div>
         </div>
 
+        <!-- PERSONAL NOTES PANEL -->
+        <div id="personal-notes-container" class="nav-hidden">
+            <div class="personal-notes-header">Personal Notes</div>
+            <div class="personal-notes-actions">
+                <button id="btn-add-note" class="action-btn">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="12" y1="18" x2="12" y2="12"></line>
+                        <line x1="9" y1="15" x2="15" y2="15"></line>
+                    </svg>
+                    Add Note
+                </button>
+                <button id="btn-draw" class="action-btn">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                        <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                        <path d="M2 2l7.586 7.586"></path>
+                        <circle cx="11" cy="11" r="2"></circle>
+                    </svg>
+                    Draw
+                </button>
+                <!-- DRAWING TOOLBAR (Hidden by default) -->
+                <div id="drawing-toolbar" style="display: none;">
+                    <button id="draw-pencil" class="draw-tool-btn active">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path></svg>
+                        <div class="draw-tooltip">Pencil</div>
+                    </button>
+                    <button id="draw-eraser" class="draw-tool-btn">
+                        <!-- Eraser Icon -->
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none"><path d="M18.5 2.5L9 12l-1.5-1.5 9.5-9.5 1.5 1.5zm-11 11l-5 5L5 21h5l5-5-5-5z"/></svg>
+                        <div class="draw-tooltip">Eraser</div>
+                    </button>
+                    <button id="draw-undo" class="draw-tool-btn">
+                        <!-- Undo Icon -->
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                        <div class="draw-tooltip">Undo</div>
+                    </button>
+                    <button id="draw-trash" class="draw-tool-btn">
+                        <!-- Trash Icon -->
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        <div class="draw-tooltip">Clear All</div>
+                    </button>
+                    <button id="draw-close" class="draw-tool-btn">
+                        <!-- X Icon -->
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <div class="draw-tooltip">Close</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- SUGGESTED VIEWS -->
         <div id="suggested-views-container" class="nav-hidden">
             <div class="suggested-view-header">Suggested Views</div>
@@ -183,7 +235,12 @@
 
         <!-- LEGENDA  -->
         <div id="legend-card" class="panel-card">
-            <div id="legend-title">Legend</div>
+            <div id="legend-title">
+                <span>Legend</span>
+                <button id="legend-toggle-btn" class="panel-toggle-btn">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                </button>
+            </div>
             <div id="legend">
                 <!-- Sezione 1: Node Types -->
                 <div class="legend-section">
