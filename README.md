@@ -100,7 +100,3 @@ If `authors.json` contains identifiers that could be linked back to individuals,
 ## How to cite
 
 If you use this repository in academic work, please cite it using the metadata in `CITATION.cff`.
-
-## Acknowledgements
-
-Add project acknowledgements here (e.g., BCause / ORBIS / data sources) as appropriate.
