@@ -405,6 +405,9 @@ svg {
 /* Content Container (il div centrale) */
 #details-card > div:nth-child(2) {
     padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* Occupa lo spazio tra header e stats */
 }
 
 #details-stats {
@@ -498,7 +501,7 @@ svg {
 }
 
 .label-main { font-weight: 500; text-transform: uppercase; }
-.label-sub { color: var(--c-text-secondary); font-size: var(--fs-tiny); }
+.label-sub { color: var(--c-text-secondary); font-size: var(--fs-tiny); font-family: var(--font-sans); }
 
 /* Simboli Geometrici CSS */
 .symbol-inner {
@@ -629,12 +632,17 @@ svg {
 .tutorial-visual {
     display: flex;
     justify-content: center;
+    align-items: center;
     margin-top: 24px;
+    height: 300px; /* Reserve space to prevent layout jumping during load */
+    flex-shrink: 0;
 }
 
 .tutorial-visual svg,
 .tutorial-visual img {
-    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
     height: auto;
 }
 
@@ -1535,6 +1543,42 @@ input:checked + .slider:before {
     color: #fff;
 }
 
+/* --- ORIGINAL CONTRIBUTION BUTTON --- */
+#details-origin-container {
+    margin-top: auto; /* Spinge il bottone in fondo al container del contenuto */
+    padding-top: 20px;
+}
+
+.origin-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: 1px solid var(--c-accent);
+    color: var(--c-accent);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+    margin-top: 0;
+}
+
+.origin-btn:hover {
+    background: var(--c-accent);
+    color: #fff;
+}
+
+.origin-btn svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
 /* --- CUSTOM POPUP --- */
 .custom-popup-overlay {
     position: fixed;
@@ -1622,6 +1666,10 @@ input:checked + .slider:before {
     outline: 1px solid transparent;
 }
 
+.postit-wrapper.selected {
+    outline: 2px solid var(--c-accent);
+}
+
 .postit-object {
     overflow: visible;
 }
@@ -1674,6 +1722,65 @@ input:checked + .slider:before {
 .rh-ne { top: -4px; right: -4px; cursor: ne-resize; }
 .rh-sw { bottom: -4px; left: -4px; cursor: sw-resize; }
 .rh-se { bottom: -4px; right: -4px; cursor: se-resize; }
+
+/* Post-it Link Handles */
+.link-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: var(--c-accent);
+    border-radius: 50%;
+    cursor: crosshair;
+    z-index: 20;
+    display: none; /* Hidden by default */
+    border: 1px solid #fff;
+    box-shadow: 0 0 2px rgba(0,0,0,0.3);
+}
+
+.postit-wrapper.selected .link-handle {
+    display: block;
+}
+
+.lh-n { top: -15px; left: 50%; transform: translateX(-50%); }
+.lh-e { top: 50%; right: -15px; transform: translateY(-50%); }
+.lh-s { bottom: -15px; left: 50%; transform: translateX(-50%); }
+.lh-w { top: 50%; left: -15px; transform: translateY(-50%); }
+
+/* Post-it Links */
+.postit-link-visual {
+    stroke: var(--c-accent);
+    stroke-width: 2px;
+    stroke-dasharray: 5, 3;
+    opacity: 0.8;
+    transition: stroke-width 0.2s;
+    pointer-events: none;
+}
+
+.postit-link-group {
+    cursor: pointer;
+}
+
+.postit-link-group:hover .postit-link-visual {
+    stroke-width: 3px;
+    opacity: 1;
+}
+
+.temp-link {
+    stroke: var(--c-accent);
+    stroke-width: 2px;
+    stroke-dasharray: 5, 3;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+/* Hover effect for link targets */
+.link-target-hover {
+    stroke: var(--c-accent) !important;
+    stroke-width: 4px !important;
+    filter: drop-shadow(0 0 4px var(--c-accent));
+    /* Note: Scale transform on SVG elements with existing transform attributes 
+       can be tricky, so we rely on stroke/glow for feedback */
+}
 
 /* --- RESPONSIVE DESIGN --- */
 

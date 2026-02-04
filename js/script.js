@@ -21,6 +21,7 @@ const g = svg.append("g");
 // Drawing Order: Hulls -> Links -> Nodes -> Labels
 const hullGroup = g.append("g").attr("class", "hulls");
 const linkGroup = g.append("g").attr("class", "links");
+const postitLinkGroup = g.append("g").attr("class", "postit-links"); // Layer for post-it connections
 const nodeGroup = g.append("g").attr("class", "nodes");
 const labelGroup = g.append("g").attr("class", "labels");
 const postitGroup = g.append("g").attr("class", "postits"); // Layer for post-its
@@ -152,6 +153,7 @@ function hexToRgba(hex, alpha) {
 // --- GLOBAL REFERENCES ---
 let globalNodes = [];
 let globalEdges = [];
+let postitLinksData = []; // Store connections between post-its and nodes
 let titleAccessorGlobal;
 let globalClusterMembers = new Map();
 let getLinkOpacity; // Global helper for consistency
@@ -1053,6 +1055,18 @@ globalClusterMembers.forEach((members, clusterId) => {
         simulation.alpha(0.5).restart();
     };
 
+    // Helper to calculate handle coordinates for links
+    function getHandleCoords(d, handle) {
+        const centerOffset = 10; // 15px (CSS offset) - 5px (half size) = 10px from border
+        let hx = d.x;
+        let hy = d.y;
+        if (handle === 'n') { hx += d.width / 2; hy -= centerOffset; }
+        if (handle === 'e') { hx += d.width + centerOffset; hy += d.height / 2; }
+        if (handle === 's') { hx += d.width / 2; hy += d.height + centerOffset; }
+        if (handle === 'w') { hx -= centerOffset; hy += d.height / 2; }
+        return [hx, hy];
+    }
+
     let tickCount = 0;
 
     function ticked() {
@@ -1067,6 +1081,33 @@ globalClusterMembers.forEach((members, clusterId) => {
 
         // Aggiorna posizioni Nodi
         node.attr("transform", d => `translate(${d.x},${d.y})`);
+
+        // Aggiorna posizioni Link dei Post-it
+        postitLinkGroup.selectAll(".postit-link-group").each(function(d) {
+            if (!d.target || d.target.x === undefined) return;
+
+            // Dynamically find the closest handle to the target
+            const handles = ['n', 'e', 's', 'w'];
+            let bestCoords = [0, 0];
+            let minSqDist = Infinity;
+
+            handles.forEach(h => {
+                const coords = getHandleCoords(d.source, h);
+                const dx = coords[0] - d.target.x;
+                const dy = coords[1] - d.target.y;
+                const distSq = dx * dx + dy * dy;
+                if (distSq < minSqDist) {
+                    minSqDist = distSq;
+                    bestCoords = coords;
+                }
+            });
+
+            d3.select(this).selectAll("line")
+                .attr("x1", bestCoords[0])
+                .attr("y1", bestCoords[1])
+                .attr("x2", d.target.x)
+                .attr("y2", d.target.y);
+        });
 
         // Aggiorna posizione Anello di Selezione
         if (selectedNodeData) {
@@ -1148,14 +1189,15 @@ globalClusterMembers.forEach((members, clusterId) => {
         let type = d.mainStat || titleAccessor(d) || "unknown";
         const typeColor = getNodeColor(d);
         if (type === "ENTITY") type = "KEYWORD";
-        const sub = d.subStat || "";
+        let sub = d.subStat || "";
+        if (sub.toUpperCase() === "ENTITY") sub = "";
         const text = d.detail__text || "";
         
         // Unify Type and Title: Type first (Mono, Colored), then Title (Sans, Primary)
         const typeHTML = `<div style="font-family: var(--font-mono); font-size: var(--fs-small); text-transform: uppercase; margin-bottom: 4px; color: ${typeColor}; font-weight: var(--fw-bold);">${escapeHTML(type)}${sub ? " · " + escapeHTML(sub) : ""}</div>`;
         
         // Only show title if it's not redundant with the type string (prevents duplicates in Subject nodes)
-        const isRedundant = title && title.toUpperCase() === type.toUpperCase();
+        const isRedundant = title && (title.toUpperCase() === type.toUpperCase() || (type === "KEYWORD" && title.toUpperCase() === "ENTITY"));
         const titleColor = (titleAccessorGlobal(d) === "SUBJECT") ? "var(--c-text-primary)" : typeColor;
         const titleHTML = (title && !isRedundant) ? `<strong style="color: ${titleColor}; display: block; margin-bottom: 2px; font-family: var(--font-sans);">${escapeHTML(title)}</strong>` : "";
 
@@ -1218,6 +1260,9 @@ globalClusterMembers.forEach((members, clusterId) => {
 
         // Rimuovi selezione visiva
         nodeGroup.selectAll(".node").classed("selected", false);
+
+        // Deselect postits
+        d3.selectAll(".postit-wrapper").classed("selected", false);
 
         // Reset Toggles
         const tContested = document.getElementById("toggle-contested");
@@ -1378,6 +1423,27 @@ globalClusterMembers.forEach((members, clusterId) => {
         const textContainer = d3.select("#node-text");
         textContainer.text(displayText);
 
+        // --- ORIGINAL CONTRIBUTION BUTTON ---
+        const contentDiv = d3.select("#details-card > div:nth-child(2)");
+        contentDiv.select("#details-origin-container").remove();
+        
+        const rawType = titleAccessorGlobal(d);
+        if (rawType === "POSITION" || rawType === "INFAVOR" || rawType === "AGAINST") {
+            contentDiv.append("div")
+                .attr("id", "details-origin-container")
+                .append("button")
+                .attr("class", "origin-btn")
+                .html(`
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                    Go to original contribution
+                `)
+                .on("click", () => showOriginFeedback());
+        }
+
         // Ensure stats container has correct base structure (in case it was overwritten)
         const statsContainer = d3.select("#details-stats");
         if (statsContainer.select("#node-value").empty()) {
@@ -1433,18 +1499,18 @@ globalClusterMembers.forEach((members, clusterId) => {
         }
 
         // --- CUSTOM POPUP LOGIC ---
-        window.showContestFeedback = function() {
-            let overlay = d3.select("#contest-popup-overlay");
+        window.showCustomPopup = function(title, message) {
+            let overlay = d3.select("#custom-popup-overlay");
             if (overlay.empty()) {
                 overlay = d3.select("body").append("div")
-                    .attr("id", "contest-popup-overlay")
+                    .attr("id", "custom-popup-overlay")
                     .attr("class", "custom-popup-overlay");
                 
                 const popup = overlay.append("div")
                     .attr("class", "custom-popup");
                 
-                popup.append("h3").text("Feedback Recorded");
-                popup.append("p").text("Thank you for your contribution. Your contestation has been logged and will be used to refine the AI's thematic classification and semantic extraction models.");
+                popup.append("h3").attr("id", "popup-title");
+                popup.append("p").attr("id", "popup-message");
                 
                 popup.append("button")
                     .attr("class", "custom-popup-close")
@@ -1455,7 +1521,23 @@ globalClusterMembers.forEach((members, clusterId) => {
                     if (event.target === overlay.node()) overlay.classed("visible", false);
                 });
             }
+            overlay.select("#popup-title").text(title);
+            overlay.select("#popup-message").text(message);
             overlay.classed("visible", true);
+        };
+
+        window.showContestFeedback = function() {
+            showCustomPopup(
+                "Feedback Recorded",
+                "Thank you for your contribution. Your contestation has been logged and will be used to refine the AI's thematic classification and semantic extraction models."
+            );
+        };
+
+        window.showOriginFeedback = function() {
+            showCustomPopup(
+                "Original Contribution",
+                "This feature is currently under development. In the future, this button will securely redirect you to the original platform where this contribution was posted, allowing you to verify the full context and metadata."
+            );
         };
 
         // --- CONTEST AI CLASSIFICATION ---
@@ -2622,6 +2704,7 @@ globalClusterMembers.forEach((members, clusterId) => {
     if (btnAddNote) {
         btnAddNote.addEventListener("click", (e) => {
             e.stopPropagation(); // Prevent SVG click
+            if (isDrawingMode) toggleDrawingMode(false);
             togglePostitMode();
         });
     }
@@ -2679,6 +2762,7 @@ globalClusterMembers.forEach((members, clusterId) => {
     if (btnDraw) {
         btnDraw.addEventListener("click", (e) => {
             e.stopPropagation();
+            if (isAddingPostit) togglePostitMode(false);
             toggleDrawingMode(true);
         });
     }
@@ -2786,6 +2870,12 @@ globalClusterMembers.forEach((members, clusterId) => {
 
         const div = fo.append("xhtml:div")
             .attr("class", "postit-wrapper");
+        
+        // Selection logic
+        div.on("mousedown", function() {
+            d3.selectAll(".postit-wrapper").classed("selected", false);
+            d3.select(this).classed("selected", true);
+        });
 
         // Header
         const header = div.append("div").attr("class", "postit-header");
@@ -2795,6 +2885,13 @@ globalClusterMembers.forEach((members, clusterId) => {
             .attr("class", "postit-close")
             .text("✕")
             .on("click", function() {
+                // Remove associated links
+                postitLinksData = postitLinksData.filter(l => l.source !== postitData);
+                postitLinkGroup.selectAll(".postit-link-group")
+                    .data(postitLinksData)
+                    .exit()
+                    .remove();
+                // Remove postit
                 fo.remove();
             });
 
@@ -2854,6 +2951,135 @@ globalClusterMembers.forEach((members, clusterId) => {
                         // Update DOM
                         fo.attr("width", newW).attr("height", newH)
                           .attr("x", newX).attr("y", newY);
+                        simulation.alpha(0.01).restart(); // Update links while resizing
+                    })
+                );
+        });
+
+        // Link Handles (N, E, S, W)
+        const linkHandles = ["n", "e", "s", "w"];
+        let tempLinkLine = null;
+
+        linkHandles.forEach(pos => {
+            div.append("div")
+                .attr("class", `link-handle lh-${pos}`)
+                .on("mouseover", function(event) {
+                    tooltip.style("opacity", 1).html(`<div style="font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; color: var(--c-text-primary);">Drag to link</div>`);
+                    moveTooltip(event);
+                })
+                .on("mousemove", moveTooltip)
+                .on("mouseout", function() {
+                    tooltip.style("opacity", 0);
+                })
+                .call(d3.drag()
+                    .on("start", function(event) {
+                        // Create temp line starting from the specific handle
+                        const [sx, sy] = getHandleCoords(postitData, pos);
+                        tempLinkLine = postitLinkGroup.append("line")
+                            .attr("class", "temp-link")
+                            .attr("x1", sx)
+                            .attr("y1", sy)
+                            .attr("x2", sx)
+                            .attr("y2", sy);
+                    })
+                    .on("drag", function(event) {
+                        // Update temp line to mouse position
+                        // We need coordinates relative to the graph container 'g'
+                        const coords = d3.pointer(event, g.node());
+                        tempLinkLine.attr("x2", coords[0]).attr("y2", coords[1]);
+
+                        // Hover Effect Logic
+                        // 1. Hide temp line to not block hit test
+                        tempLinkLine.style("display", "none");
+                        // 2. Hide handle to not block hit test
+                        d3.select(this).style("pointer-events", "none");
+
+                        const el = document.elementFromPoint(event.sourceEvent.clientX, event.sourceEvent.clientY);
+                        
+                        // Restore visibility/events
+                        tempLinkLine.style("display", "block");
+                        d3.select(this).style("pointer-events", "all");
+
+                        // Clear previous hover
+                        d3.selectAll(".link-target-hover").classed("link-target-hover", false);
+
+                        const d3Datum = d3.select(el).datum();
+                        // Ensure we are hovering a Node or a Hull (ignore edges/lines)
+                        const isNode = el.classList.contains("node");
+                        const isHull = el.classList.contains("hull");
+                        if ((isNode || isHull) && d3Datum && (d3Datum.id || titleAccessorGlobal(d3Datum) === "CLUSTER")) {
+                            d3.select(el).classed("link-target-hover", true);
+                        }
+                    })
+                    .on("end", function(event) {
+                        // Remove temp line
+                        if (tempLinkLine) tempLinkLine.remove();
+                        tempLinkLine = null;
+                        
+                        // Clear hover effect
+                        d3.selectAll(".link-target-hover").classed("link-target-hover", false);
+
+                        // Hit test: what is under the mouse?
+                        // We use the client coordinates from the source event
+                        const clientX = event.sourceEvent.clientX;
+                        const clientY = event.sourceEvent.clientY;
+                        
+                        // Temporarily hide the handle/postit so elementFromPoint sees below
+                        const handle = d3.select(this);
+                        handle.style("pointer-events", "none");
+                        
+                        const el = document.elementFromPoint(clientX, clientY);
+                        
+                        handle.style("pointer-events", "all"); // Restore
+
+                        if (!el || el.tagName === 'line') return; // Ignore edges
+
+                        // Check if we hit a Node or a Hull
+                        const d3Datum = d3.select(el).datum();
+                        const isNode = el.classList.contains("node");
+                        const isHull = el.classList.contains("hull");
+                        
+                        if ((isNode || isHull) && d3Datum && (d3Datum.id || titleAccessorGlobal(d3Datum) === "CLUSTER")) {
+                            // Create Link
+                            postitLinksData.push({ source: postitData, target: d3Datum, handle: pos });
+                            
+                            const links = postitLinkGroup.selectAll(".postit-link-group")
+                                .data(postitLinksData);
+                            
+                            const linksEnter = links.enter()
+                                .append("g")
+                                .attr("class", "postit-link-group");
+                            
+                            // Hit area (invisible, wide)
+                            linksEnter.append("line")
+                                .attr("class", "postit-link-hit")
+                                .style("stroke", "transparent")
+                                .style("stroke-width", "15px");
+
+                            // Visual line
+                            linksEnter.append("line")
+                                .attr("class", "postit-link-visual");
+
+                            linksEnter
+                                .on("contextmenu", function(event, d) {
+                                    event.preventDefault();
+                                    // Remove link on right click
+                                    postitLinksData = postitLinksData.filter(l => l !== d);
+                                    d3.select(this).remove();
+                                    tooltip.style("opacity", 0);
+                                })
+                                .on("mouseover", function(event) {
+                                    tooltip.style("opacity", 1).html(`<div style="font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; color: var(--c-text-primary);">Right-click to remove</div>`);
+                                    moveTooltip(event);
+                                })
+                                .on("mousemove", moveTooltip)
+                                .on("mouseout", function() {
+                                    tooltip.style("opacity", 0);
+                                });
+                            
+                            // Trigger tick to update positions immediately
+                            simulation.alpha(0.01).restart();
+                        }
                     })
                 );
         });
@@ -2861,6 +3087,10 @@ globalClusterMembers.forEach((members, clusterId) => {
         // Drag Behavior for the whole post-it (via header)
         header.call(d3.drag()
             .on("start", function(event) {
+                // Select on drag start
+                d3.selectAll(".postit-wrapper").classed("selected", false);
+                div.classed("selected", true);
+
                 const d = postitData;
                 d.startX = d.x;
                 d.startY = d.y;
@@ -2874,11 +3104,13 @@ globalClusterMembers.forEach((members, clusterId) => {
                 d.x = d.startX + (coords[0] - d.pointerX);
                 d.y = d.startY + (coords[1] - d.pointerY);
                 fo.attr("x", d.x).attr("y", d.y);
+                simulation.alpha(0.01).restart(); // Update links while dragging postit
             })
         );
         
         // Prevent zoom when interacting with post-it
         fo.on("mousedown", (e) => e.stopPropagation())
+          .on("click", (e) => e.stopPropagation())
           .on("dblclick", (e) => e.stopPropagation());
     }
     
