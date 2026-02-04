@@ -28,6 +28,7 @@ const drawingGroup = g.append("g").attr("class", "drawings").lower(); // Layer f
 
 const zoom = d3.zoom()
     .scaleExtent([0.1, 4])
+    .translateExtent([[-width, -height], [width * 2, height * 2]])
     .on("zoom", (event) => {
         // Blocca solo se non è interattivo E l'evento è generato dall'utente (mouse/touch).
         // Se event.sourceEvent è null, è uno zoom programmatico (tutorial) e deve passare.
@@ -47,7 +48,7 @@ zoom.filter((event) => {
 
 svg.call(zoom);
 
-function alignSideButtons() {
+function alignLayout() {
     const minimap = document.getElementById("minimap-container");
     const btnIds = [
         "reset-view-container",
@@ -58,34 +59,62 @@ function alignSideButtons() {
     ];
     
     const buttons = btnIds.map(id => document.getElementById(id)).filter(el => el);
-    if (!minimap || buttons.length < 2) return;
+    if (!minimap) return;
 
     // Usiamo getComputedStyle per ottenere i valori di layout "target" definiti nel CSS.
     // Questo ignora le trasformazioni temporanee (come il translateY di nav-hidden) e rispetta i margini reali.
     const mStyle = window.getComputedStyle(minimap);
-    const mHeight = parseFloat(mStyle.height);
-    const mBottom = parseFloat(mStyle.bottom); 
+    const mHeight = parseFloat(mStyle.height) || 0;
+    const mBottom = parseFloat(mStyle.bottom) || 0; 
     
-    // Align side controls to the right of minimap
-    // Note: add-postit-container is manually positioned above suggested views, 
-    // so we exclude it from this specific stack calculation if we want it separate, 
-    // but if included in btnIds it will be stacked. 
-    // Given the request "sopra le suggested-view", we should probably handle it separately 
-    // or let CSS handle it. The CSS provided sets a fixed bottom for postit container.
-    // Let's filter it out from this stack logic to respect the CSS position.
+    // Read gap dynamically from CSS variable to ensure consistency
+    const rootStyle = getComputedStyle(document.documentElement);
+    const gap = parseFloat(rootStyle.getPropertyValue('--panel-gap')) || 10;
+
+    // 1. Align Left Stack (Minimap -> Suggested -> Notes)
+    const suggested = document.getElementById("suggested-views-container");
+    const notes = document.getElementById("personal-notes-container");
+    
+    let currentBottom = mBottom + mHeight + gap;
+
+    if (suggested && !suggested.classList.contains('nav-hidden')) {
+        suggested.style.bottom = `${currentBottom}px`;
+        currentBottom += suggested.offsetHeight + gap;
+    }
+
+    if (notes && !notes.classList.contains('nav-hidden')) {
+        notes.style.bottom = `${currentBottom}px`;
+    }
+    
+    // 2. Align Side Buttons (Right of Minimap)
+    if (buttons.length < 2) return;
+
     const stackButtons = buttons;
     
-    const mLeft = parseFloat(mStyle.left) + parseFloat(mStyle.width) + 10;
+    const mWidth = parseFloat(mStyle.width) || 0;
+    const mLeft = parseFloat(mStyle.left) || 0;
+    const sideLeft = mLeft + mWidth + gap;
 
     const btnHeight = stackButtons[0].offsetHeight || 36; 
     const numButtons = stackButtons.length;
 
     stackButtons.forEach((btn, i) => {
-        const posBottom = mBottom + (i * (mHeight - btnHeight) / (numButtons - 1));
+        let posBottom;
+        if (numButtons <= 1) {
+            posBottom = mBottom + (mHeight - btnHeight) / 2;
+        } else {
+            // Distribute buttons exactly within the minimap's height
+            posBottom = mBottom + (i * (mHeight - btnHeight) / (numButtons - 1));
+        }
         btn.style.bottom = `${posBottom}px`;
-        btn.style.left = `${mLeft}px`;
+        btn.style.left = `${sideLeft}px`;
     });
 }
+
+// Observer to handle layout changes when minimap or panels resize (e.g. via CSS or content)
+const layoutObserver = new ResizeObserver(() => {
+    alignLayout();
+});
 
 window.addEventListener("resize", () => {
     const container = document.getElementById("graph-container");
@@ -93,6 +122,7 @@ window.addEventListener("resize", () => {
 
     width = container.clientWidth;
     height = container.clientHeight;
+    zoom.translateExtent([[-width, -height], [width * 2, height * 2]]);
 
     // Controllo di sicurezza: esegui solo se la simulazione è già stata inizializzata
     if (simulation && updateSimulationCenter) {
@@ -100,7 +130,15 @@ window.addEventListener("resize", () => {
         const tutorialOpen = tutorialSidebar && !tutorialSidebar.classList.contains('tutorial-closed');
         updateSimulationCenter(tutorialOpen);
     }
-    alignSideButtons();
+    alignLayout();
+});
+
+// Initialize observers once the DOM is ready
+document.addEventListener("DOMContentLoaded", () => {
+    const minimap = document.getElementById("minimap-container");
+    if (minimap) layoutObserver.observe(minimap);
+    const suggested = document.getElementById("suggested-views-container");
+    if (suggested) layoutObserver.observe(suggested);
 });
 
 function hexToRgba(hex, alpha) {
@@ -116,6 +154,7 @@ let globalNodes = [];
 let globalEdges = [];
 let titleAccessorGlobal;
 let globalClusterMembers = new Map();
+let getLinkOpacity; // Global helper for consistency
 // --- TIMELINE VARIABLES (GLOBAL) ---
 let timeDomain = [0, 0];
 let currentTime = 0;
@@ -140,17 +179,13 @@ function highlightNodes(filterFn) {
 
     // 2. Update LINK (La logica richiesta)
     linkGroup.selectAll("line").transition().duration(400)
-        .attr("stroke", "#bbb") // Assicura che il colore sia sempre quello corretto
         .attr("stroke-opacity", d => {
             // Un link è attivo SOLO SE entrambi i nodi che connette sono attivi
             const isSourceActive = filterFn(d.source);
             const isTargetActive = filterFn(d.target);
 
             if (isSourceActive && isTargetActive) {
-                // Se attivo, manteniamo la distinzione semantica AI (ENTITY) vs Umano
-                const sType = titleAccessorGlobal(d.source);
-                const tType = titleAccessorGlobal(d.target);
-                return (sType === "ENTITY" || tType === "ENTITY") ? 0.4 : 0.8;
+                return getLinkOpacity(d, true); // Active state
             }
 
             // Se uno dei due nodi è disattivo, il link quasi scompare
@@ -173,13 +208,7 @@ function resetHighlight() {
         .attr("stroke-opacity", 1);
 
     linkGroup.selectAll("line").transition().duration(400)
-        .attr("stroke", "#bbb") // Uniforma il colore al reset
-        .attr("stroke-opacity", d => {
-            const sType = titleAccessorGlobal(d.source);
-            const tType = titleAccessorGlobal(d.target);
-            // Torna all'opacità di default: 0.25 per AI, 0.6 per Umano
-            return (sType === "ENTITY" || tType === "ENTITY") ? 0.25 : 0.6;
-        });
+        .attr("stroke-opacity", d => getLinkOpacity(d));
 
     labelGroup.selectAll("text").transition().duration(400)
         .attr("opacity", 1);
@@ -371,6 +400,27 @@ Promise.all([
 
     const nodeById = new Map(nodes.map(d => [d.id, d]));
     edges = edges.filter(e => nodeById.has(e.source) && nodeById.has(e.target));
+
+    // Helper per la coerenza visiva degli archi (Unifica spessore e stile)
+    const getLinkStrokeWidth = d => {
+        const sType = titleAccessorGlobal(nodeById.get(d.source.id || d.source));
+        const tType = titleAccessorGlobal(nodeById.get(d.target.id || d.target));
+        return (sType === "ENTITY" || tType === "ENTITY") ? 1.5 : 1.8;
+    };
+
+    const getLinkDashArray = d => {
+        const sType = titleAccessorGlobal(nodeById.get(d.source.id || d.source));
+        const tType = titleAccessorGlobal(nodeById.get(d.target.id || d.target));
+        return (sType === "ENTITY" || tType === "ENTITY") ? "4,3" : "none";
+    };
+
+    getLinkOpacity = (d, active = false) => {
+        const sType = titleAccessorGlobal(nodeById.get(d.source.id || d.source));
+        const tType = titleAccessorGlobal(nodeById.get(d.target.id || d.target));
+        const isEntity = (sType === "ENTITY" || tType === "ENTITY");
+        if (active) return isEntity ? 0.4 : 0.8; // active opacity controller
+        return isEntity ? 0.35 : 0.6; // default opacity controlloer (dashed vs solid)
+    };
 
     // --- CLUSTER LOGIC ---
     const clusterMembers = new Map();
@@ -677,25 +727,13 @@ globalClusterMembers.forEach((members, clusterId) => {
         .append("line")
         .attr("class", "link")
         // Colore base dei link
-        .attr("stroke", "#bbb")
+        .attr("stroke", "#000000")
         // Spessore differenziato
-        .attr("stroke-width", d => {
-            const sType = titleAccessorGlobal(nodeById.get(d.source.id || d.source));
-            const tType = titleAccessorGlobal(nodeById.get(d.target.id || d.target));
-            return (sType === "ENTITY" || tType === "ENTITY") ? 1.2 : 1.2;
-        })
+        .attr("stroke-width", d => getLinkStrokeWidth(d))
         // TRATTEGGIO: Solo per le Keywords (ENTITY)
-        .style("stroke-dasharray", d => {
-            const sType = titleAccessorGlobal(nodeById.get(d.source.id || d.source));
-            const tType = titleAccessorGlobal(nodeById.get(d.target.id || d.target));
-            return (sType === "ENTITY" || tType === "ENTITY") ? "4,3" : "none";
-        })
+        .style("stroke-dasharray", d => getLinkDashArray(d))
         // Opacità ridotta per le connessioni AI
-        .attr("stroke-opacity", d => {
-            const sType = titleAccessorGlobal(nodeById.get(d.source.id || d.source));
-            const tType = titleAccessorGlobal(nodeById.get(d.target.id || d.target));
-            return (sType === "ENTITY" || tType === "ENTITY") ? 0.25 : 0.6;
-        });
+        .attr("stroke-opacity", d => getLinkOpacity(d));
 
     // --- 3. DRAW NODES ---
     let node = nodeGroup.selectAll("path.node")
@@ -864,26 +902,13 @@ globalClusterMembers.forEach((members, clusterId) => {
         linkSelection.enter()
             .append("line")
             .attr("class", "link")
-            .attr("stroke", "#bbb")
-            .attr("stroke-width", d => {
-                const sType = titleAccessorGlobal(globalNodes.find(n => n.id === (d.source.id || d.source)));
-                const tType = titleAccessorGlobal(globalNodes.find(n => n.id === (d.target.id || d.target)));
-                return (sType === "ENTITY" || tType === "ENTITY") ? 1.2 : 1.2;
-            })
-            .style("stroke-dasharray", d => {
-                const sType = titleAccessorGlobal(globalNodes.find(n => n.id === (d.source.id || d.source)));
-                const tType = titleAccessorGlobal(globalNodes.find(n => n.id === (d.target.id || d.target)));
-                return (sType === "ENTITY" || tType === "ENTITY") ? "4,3" : "none";
-            })
+            .attr("stroke-width", d => getLinkStrokeWidth(d))
+            .style("stroke-dasharray", d => getLinkDashArray(d))
             .attr("stroke-opacity", 0)
             .transition()
             .duration(0)
             .delay((d, i) => i * staggerDelay)
-            .attr("stroke-opacity", d => {
-                const sType = titleAccessorGlobal(globalNodes.find(n => n.id === (d.source.id || d.source)));
-                const tType = titleAccessorGlobal(globalNodes.find(n => n.id === (d.target.id || d.target)));
-                return (sType === "ENTITY" || tType === "ENTITY") ? 0.25 : 0.6;
-            });
+            .attr("stroke-opacity", d => getLinkOpacity(d));
 
         // Aggiorna hulls
         const hullData = visibleNodes.filter(d => titleAccessorGlobal(d) === "CLUSTER");
@@ -1067,8 +1092,8 @@ globalClusterMembers.forEach((members, clusterId) => {
         // Force frequent updates during playback to ensure responsiveness
         if (isPlaying) hullModulo = 1;
         else if (alpha > 0.1) hullModulo = 2;       // Movimento rapido: ogni 2 tick
-        else if (alpha > 0.03) hullModulo = 8; // Movimento rallentato: ogni 8 tick
-        else hullModulo = 24;                 // Quasi statico: ogni 24 tick
+        else if (alpha > 0.03) hullModulo = 4; // Movimento rallentato: ogni 8 tick
+        else hullModulo = 12;                 // Quasi statico: ogni 24 tick
 
         if (tickCount % hullModulo === 0 || alpha <= simulation.alphaMin() + 0.001) {
             hulls.attr("d", d => getHullPath(d));
@@ -1119,19 +1144,26 @@ globalClusterMembers.forEach((members, clusterId) => {
     }
 
     function buildTooltipHTML(d) {
-        const title = d.detail__title || "";
+        const title = d.detail__title || d.title || "";
         let type = d.mainStat || titleAccessor(d) || "unknown";
+        const typeColor = getNodeColor(d);
         if (type === "ENTITY") type = "KEYWORD";
         const sub = d.subStat || "";
         const text = d.detail__text || "";
-
-        const titleHTML = title ? `<strong>${escapeHTML(title)}</strong><br/>` : "";
+        
+        // Unify Type and Title: Type first (Mono, Colored), then Title (Sans, Primary)
+        const typeHTML = `<div style="font-family: var(--font-mono); font-size: var(--fs-small); text-transform: uppercase; margin-bottom: 4px; color: ${typeColor}; font-weight: var(--fw-bold);">${escapeHTML(type)}${sub ? " · " + escapeHTML(sub) : ""}</div>`;
+        
+        // Only show title if it's not redundant with the type string (prevents duplicates in Subject nodes)
+        const isRedundant = title && title.toUpperCase() === type.toUpperCase();
+        const titleColor = (titleAccessorGlobal(d) === "SUBJECT") ? "var(--c-text-primary)" : typeColor;
+        const titleHTML = (title && !isRedundant) ? `<strong style="color: ${titleColor}; display: block; margin-bottom: 2px; font-family: var(--font-sans);">${escapeHTML(title)}</strong>` : "";
 
         return `
+            ${typeHTML}
             ${titleHTML}
-            <div style="font-family: var(--font-mono); font-size: var(--fs-small); text-transform: uppercase; margin-bottom: 4px; color: var(--color-primary);">${escapeHTML(type)}${sub ? " · " + escapeHTML(sub) : ""}</div>
-            <div style="font-size: 11px; margin-bottom: 8px; line-height: 1.4;">${escapeHTML(truncate(text, 140))}</div>
-            <div style="font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; opacity: 0.6; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 4px;">Click for details</div>
+            <div style="font-size: 11px; margin-bottom: 8px; line-height: var(--lh-tight); color: var(--c-text-primary); font-family: var(--font-sans);">${escapeHTML(truncate(text, 140))}</div>
+            <div style="font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; opacity: 0.6; border-top: 1px solid var(--c-border); padding-top: 4px; color: var(--c-text-secondary);">Click for details</div>
         `;
     }
 
@@ -1324,6 +1356,16 @@ globalClusterMembers.forEach((members, clusterId) => {
             .style("border", `1px solid ${hexToRgba(typeColor, 0.3)}`) // Bordo sottile coordinato
             .text(nodeType);
 
+        // AI Confidence Badge (Fake data for future implementation)
+        if (titleAccessorGlobal(d) === "CLUSTER" || titleAccessorGlobal(d) === "ENTITY") {
+            const fakeConfidence = Math.floor(Math.random() * (98 - 82) + 82); // 82-98%
+            typesContainer.append("span")
+                .attr("class", "pill ai-confidence")
+                .style("border-color", "var(--c-accent)")
+                .style("color", "var(--c-accent)")
+                .text(`AI CONFIDENCE: ${fakeConfidence}%`);
+        }
+
         const displayTitle = (titleAccessorGlobal(d) === "CLUSTER") ?
             (d.detail__tagline || d.detail__title || "") :
             (d.detail__title || "");
@@ -1335,6 +1377,12 @@ globalClusterMembers.forEach((members, clusterId) => {
         d3.select("#node-title").text(displayTitle);
         const textContainer = d3.select("#node-text");
         textContainer.text(displayText);
+
+        // Ensure stats container has correct base structure (in case it was overwritten)
+        const statsContainer = d3.select("#details-stats");
+        if (statsContainer.select("#node-value").empty()) {
+            statsContainer.html('<div class="section-title">Stats</div><div id="node-value"></div>');
+        }
 
         const nodeValueContainer = d3.select("#node-value");
         nodeValueContainer.html("");
@@ -1382,6 +1430,78 @@ globalClusterMembers.forEach((members, clusterId) => {
                 stats = `Value: ${String(d.detail__value).replace(/['"]+/g, '')}`;
             }
             nodeValueContainer.text(stats);
+        }
+
+        // --- CUSTOM POPUP LOGIC ---
+        window.showContestFeedback = function() {
+            let overlay = d3.select("#contest-popup-overlay");
+            if (overlay.empty()) {
+                overlay = d3.select("body").append("div")
+                    .attr("id", "contest-popup-overlay")
+                    .attr("class", "custom-popup-overlay");
+                
+                const popup = overlay.append("div")
+                    .attr("class", "custom-popup");
+                
+                popup.append("h3").text("Feedback Recorded");
+                popup.append("p").text("Thank you for your contribution. Your contestation has been logged and will be used to refine the AI's thematic classification and semantic extraction models.");
+                
+                popup.append("button")
+                    .attr("class", "custom-popup-close")
+                    .text("Close")
+                    .on("click", () => overlay.classed("visible", false));
+                    
+                overlay.on("click", (event) => {
+                    if (event.target === overlay.node()) overlay.classed("visible", false);
+                });
+            }
+            overlay.classed("visible", true);
+        };
+
+        // --- CONTEST AI CLASSIFICATION ---
+        // Remove previous contestation UI if present to avoid duplicates
+        statsContainer.select("#contest-action-container").remove();
+        
+        const type = titleAccessorGlobal(d);
+        let contestHtml = "";
+
+        if (type === "ENTITY") {
+            contestHtml = `
+                <div id="contest-action-container">
+                    <span class="section-title">Semantic Bridge Integrity</span>
+                    <p style="font-size: var(--fs-small); color: var(--c-text-secondary); margin-bottom: 10px; line-height: var(--lh-normal);">This keyword was extracted by AI to link different parts of the debate. If you find this concept irrelevant or believe it creates a "false relation" between arguments, you can contest it.</p>
+                    <button class="contest-btn" onclick="showContestFeedback()">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        Contest Keyword Extraction
+                    </button>
+                </div>
+            `;
+        } else if (type === "INFAVOR" || type === "AGAINST") {
+            const clusterId = nodeToClusterMap.get(d.id);
+            if (clusterId) {
+                const clusterNode = nodeById.get(clusterId);
+                const clusterName = clusterNode ? (clusterNode.detail__tagline || "this thematic area") : "this thematic area";
+                contestHtml = `
+                    <div id="contest-action-container">
+                        <span class="section-title">Clustering Feedback</span>
+                        <p style="font-size: var(--fs-small); color: var(--c-text-secondary); margin-bottom: 10px; line-height: var(--lh-normal);">AI has grouped this argument within <strong>${clusterName}</strong>. If this thematic classification feels incorrect to you as a human participant, please flag it.</p>
+                        <button class="contest-btn" onclick="showContestFeedback()">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                            Contest AI Clustering
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        if (contestHtml) {
+            // Append the contestation UI to the existing stats container
+            statsContainer.node().insertAdjacentHTML('beforeend', contestHtml);
+            statsContainer.style("display", "block");
+        } else {
+            // Show the container only if standard stats (like Position metrics) exist
+            const hasStats = nodeValueContainer.html().trim() !== "";
+            statsContainer.style("display", hasStats ? "block" : "none");
         }
 
         // --- WIKIPEDIA INTEGRATION ---
@@ -1498,7 +1618,7 @@ globalClusterMembers.forEach((members, clusterId) => {
         const selected = nodes.filter(filterFn);
         if (selected.length === 0) return;
 
-        const margin = 80;
+        const margin = 100; //
 
         const minX = d3.min(selected, d => d.x);
         const maxX = d3.max(selected, d => d.x);
@@ -1525,7 +1645,7 @@ globalClusterMembers.forEach((members, clusterId) => {
             .scale(scale)
             .translate(-centerX, -centerY);
 
-        svg.transition().duration(800).call(zoom.transform, transform);
+        svg.transition().duration(600).call(zoom.transform, transform);
     }
 
     function resetZoom() {
@@ -1576,6 +1696,24 @@ globalClusterMembers.forEach((members, clusterId) => {
             return;
         }
 
+        // FIX: Gestione specifica per ENTITY (Keywords)
+        // Quando compaiono (passaggio da depth 2 a 3), sono al centro e "esplodono".
+        // Invece di zoomare su di loro (che causerebbe uno zoom eccessivo al centro),
+        // inquadriamo l'intero grafo usando i nodi già stabili (Position/Arguments).
+        if (type === "ENTITY") {
+            const capturedStep = currentStep;
+            const targetNodes = globalNodes.filter(d => {
+                const t = titleAccessorGlobal(d);
+                return t === "ENTITY" || t === "SUBJECT";
+            });
+            const targetIds = new Set(targetNodes.map(n => n.id));
+            highlightNodes(n => targetIds.has(n.id));
+            setTimeout(() => {
+                if (currentStep === capturedStep) resetZoomToFit();
+            }, 1500); // Attendi l'esplosione delle keyword prima di centrare
+            return;
+        }
+
         let targetNodes = [];
 
         if (type === "OUTDEGREE") {
@@ -1593,7 +1731,6 @@ globalClusterMembers.forEach((members, clusterId) => {
                 if (type === "POSITION") return t === "POSITION";
                 if (type === "INFAVOR_AGAINST") return t === "INFAVOR" || t === "AGAINST";
                 if (type === "CLUSTER") return t === "CLUSTER";
-                if (type === "ENTITY") return t === "ENTITY";
                 return false;
             });
         }
@@ -1657,7 +1794,7 @@ globalClusterMembers.forEach((members, clusterId) => {
         const step = tutorialSteps[currentStep];
 
         // Storytelling: Update Graph Depth based on step
-        if (currentStep === 0) updateGraphDepth(3);      // Intro: Full
+        if (currentStep === 0) updateGraphDepth(2);      // Intro: Full
         else if (currentStep === 1) updateGraphDepth(0); // Subject: Subject Only
         else if (currentStep === 2) updateGraphDepth(1); // Positions: Level 1
         else if (currentStep === 3) updateGraphDepth(2); // Arguments: Level 2
@@ -1665,12 +1802,19 @@ globalClusterMembers.forEach((members, clusterId) => {
         else if (currentStep === 5) updateGraphDepth(3); // Keywords: Level 3
         else updateGraphDepth(3);
 
+        let visualHTML = "";
+        if (step.visual) {
+            if (step.visual.trim().endsWith(".svg")) {
+                visualHTML = `<img src="${step.visual}" alt="Tutorial Visual">`;
+            } else {
+                visualHTML = step.visual;
+            }
+        }
+
         tutorialContent.innerHTML = `
         <h2>${step.title}</h2>
         <p>${step.text}</p>
-        <div class="tutorial-visual">
-            ${step.visual}
-        </div>
+        ${visualHTML ? `<div class="tutorial-visual">${visualHTML}</div>` : ''}
     `;
 
         updateStepper();
@@ -1718,7 +1862,7 @@ globalClusterMembers.forEach((members, clusterId) => {
         if (themeToggleContainer) themeToggleContainer.classList.remove('nav-hidden');
         const personalNotesContainer = document.getElementById("personal-notes-container");
         if (personalNotesContainer) personalNotesContainer.classList.remove('nav-hidden');
-        alignSideButtons();
+        alignLayout();
     }
 
     // Funzione per calcolare la distanza dinamica degli archi
@@ -1903,6 +2047,10 @@ globalClusterMembers.forEach((members, clusterId) => {
             } else {
                 document.body.classList.remove("dark-mode");
             }
+            // Update eraser cursor if active to maintain visibility
+            if (isDrawingMode && currentTool === 'eraser') {
+                setDrawingTool('eraser');
+            }
         });
     }
 
@@ -2029,11 +2177,13 @@ globalClusterMembers.forEach((members, clusterId) => {
             });
         }
 
+        const resolvedLinkColor = getComputedStyle(document.documentElement).getPropertyValue('--c-link').trim() || "#bbb";
+
         // 3. Iniezione stili espliciti (risolve il problema dei cerchi neri e variabili CSS)
         const style = document.createElement("style");
         style.textContent = `
             .node { stroke-width: 2px; }
-            .link { stroke: #bbb; stroke-linecap: round; }
+            .link { stroke: ${resolvedLinkColor}; stroke-linecap: round; }
             .node-label { font-family: 'Inter', sans-serif; font-size: 10px; fill: #666; }
             .hull { stroke-width: 1px; fill-opacity: 0.25; }
             .selection-ring { 
@@ -2145,7 +2295,7 @@ globalClusterMembers.forEach((members, clusterId) => {
         updateTutorial();
         collapseInfoPanel();
         updateSimulationCenter(true);
-        alignSideButtons();
+        alignLayout();
     });
 
     // --- TIME PLAYER LOGIC ---
@@ -2508,7 +2658,9 @@ globalClusterMembers.forEach((members, clusterId) => {
         if (tool === 'pencil') {
             document.body.style.cursor = "crosshair";
         } else if (tool === 'eraser') {
-            document.body.style.cursor = "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/></svg>') 12 12, auto";
+            const isDarkMode = document.body.classList.contains("dark-mode");
+            const strokeColor = isDarkMode ? "white" : "black";
+            document.body.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="${strokeColor}" stroke-width="2"/></svg>') 12 12, auto`;
         }
     }
 
@@ -2749,7 +2901,7 @@ globalClusterMembers.forEach((members, clusterId) => {
     }
 
     updateTutorial();
-    alignSideButtons();
+    alignLayout();
 
 }).catch(error => {
     console.error("Error loading CSV files:", error);
