@@ -134,7 +134,7 @@ body {
     top: 20px;
     right: 20px;
     bottom: 20px;
-    width: 320px;
+    width: 19vw;
     /* Larghezza fissa */
 
     /* Il container è trasparente, contiene le cards */
@@ -259,6 +259,7 @@ svg {
     line-height: 1.1;
     letter-spacing: -0.02em;
     margin-bottom: 16px;
+    flex-shrink: 0;
 }
 
 #node-text {
@@ -266,6 +267,10 @@ svg {
     font-size: var(--fs-base);
     line-height: var(--lh-normal);
     color: var(--c-text-secondary);
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding-right: 6px;
 }
 
 #node-value {
@@ -379,7 +384,7 @@ svg {
     display: flex;
     flex-direction: column;
     gap: 0;
-    overflow-y: auto;
+    overflow-y: hidden;
 
     /* Nascosto di default */
     opacity: 0;
@@ -445,13 +450,24 @@ svg {
     flex: 1;
     /* Occupa lo spazio tra header e stats */
     backdrop-filter: blur(var(--panel-blur));
+    overflow: hidden;
+    min-height: 0;
 }
 
 #details-stats {
-    margin-top: auto;
     padding: 16px 20px;
     background: var(--c-bg-inset);
     border-top: 1px solid var(--c-border);
+    flex-shrink: 0;
+}
+
+#details-actions {
+    padding: 0 20px 20px 20px; /* Padding bottom for spacing */
+    background: var(--c-bg-panel);
+    border-top: 1px solid var(--c-border);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Tipografia Dettagli (Richiesta: testo più grande) */
@@ -1697,6 +1713,12 @@ input:checked+.slider:before {
     padding-top: 20px;
 }
 
+/* Group with nav container if present */
+#details-nav-container + #details-origin-container {
+    margin-top: 0;
+    padding-top: 10px;
+}
+
 .origin-btn {
     display: flex;
     align-items: center;
@@ -1714,6 +1736,47 @@ input:checked+.slider:before {
     border-radius: 2px;
     transition: all 0.2s ease;
     margin-top: 0;
+}
+
+/* --- DETAILS NAVIGATION --- */
+#details-nav-container {
+    display: flex;
+    gap: 10px;
+    margin-top: auto; /* Push to bottom if flex column */
+    padding-top: 16px;
+    border-top: 1px solid var(--c-border);
+    margin-bottom: 0; /* Space before origin btn */
+}
+
+.details-nav-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px;
+    background: var(--c-bg-panel);
+    border: 1px solid var(--c-border-strong);
+    color: var(--c-text-primary);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+}
+
+.details-nav-btn:hover:not(:disabled) {
+    background: var(--c-bg-inset);
+    border-color: var(--c-accent);
+    color: var(--c-accent);
+}
+
+.details-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: var(--c-border);
+    color: var(--c-text-muted);
 }
 
 .origin-btn:hover {
