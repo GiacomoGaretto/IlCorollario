@@ -956,6 +956,23 @@ globalClusterMembers.forEach((members, clusterId) => {
             clearNodeDetails();
             resetHighlight();
         }
+
+        // --- POST-IT VISIBILITY SYNC ---
+        // 1. Links: Visible only if target node is visible
+        postitLinkGroup.selectAll(".postit-link-group")
+            .style("display", d => {
+                return (d.target && visibleNodeIds.has(d.target.id)) ? "block" : "none";
+            });
+
+        // 2. Post-its: Visible if unlinked OR if at least one linked node is visible
+        d3.selectAll(".postit-object").each(function(d) {
+            const links = postitLinksData.filter(l => l.source === d);
+            let isVisible = true;
+            if (links.length > 0) {
+                isVisible = links.some(l => l.target && visibleNodeIds.has(l.target.id));
+            }
+            d3.select(this).style("display", isVisible ? "block" : "none");
+        });
     };
 
     let simulation;
@@ -1052,7 +1069,7 @@ globalClusterMembers.forEach((members, clusterId) => {
         // Rimosso forceCenter per evitare sbalzi (jitter) quando compaiono nuovi nodi periferici
         simulation.force("x", d3.forceX(cx).strength(d => titleAccessorGlobal(d) === "SUBJECT" ? 0.5 : 0.05));
         simulation.force("y", d3.forceY(cy).strength(d => titleAccessorGlobal(d) === "SUBJECT" ? 0.5 : 0.05));
-        simulation.alpha(0.5).restart();
+        simulation.alpha(0.3).restart();
     };
 
     // Helper to calculate handle coordinates for links
@@ -1142,14 +1159,15 @@ globalClusterMembers.forEach((members, clusterId) => {
 
         // Aggiorna nodi Minimappa
         const mContainer = document.getElementById("minimap-container");
-        const mSize = mContainer ? mContainer.clientWidth : 160;
+        const mWidth = mContainer ? mContainer.clientWidth : 160;
+        const mHeight = minimapSvg.node() ? minimapSvg.node().getBoundingClientRect().height : mWidth;
         const subjectNode = globalNodes.find(n => titleAccessorGlobal(n) === "SUBJECT");
         const refX = subjectNode && subjectNode.x !== undefined ? subjectNode.x : width / 2;
         const refY = subjectNode && subjectNode.y !== undefined ? subjectNode.y : height / 2;
 
         minimapNodes
-            .attr("cx", d => (d.x - refX) * minimapScale + mSize / 2)
-            .attr("cy", d => (d.y - refY) * minimapScale + mSize / 2);
+            .attr("cx", d => (d.x - refX) * minimapScale + mWidth / 2)
+            .attr("cy", d => (d.y - refY) * minimapScale + mHeight / 2);
         
         // Aggiorna viewport minimappa (nel caso la simulazione sposti il centro o all'avvio)
         if (updateMinimapViewport) updateMinimapViewport(d3.zoomTransform(svg.node()));
@@ -1825,7 +1843,7 @@ globalClusterMembers.forEach((members, clusterId) => {
             if (type === "POSITION") {
                 filterFn = n => targetIds.has(n.id) || titleAccessorGlobal(n) === "SUBJECT";
             } else if (type === "INFAVOR_AGAINST") {
-                filterFn = n => targetIds.has(n.id) || titleAccessorGlobal(n) === "SUBJECT" || titleAccessorGlobal(n) === "POSITION";
+                filterFn = n => targetIds.has(n.id);
             }
             highlightNodes(filterFn);
 
@@ -1886,7 +1904,7 @@ globalClusterMembers.forEach((members, clusterId) => {
 
         let visualHTML = "";
         if (step.visual) {
-            if (step.visual.trim().endsWith(".svg")) {
+            if (step.visual.trim().toLowerCase().endsWith(".svg")) {
                 visualHTML = `<img src="${step.visual}" alt="Tutorial Visual">`;
             } else {
                 visualHTML = step.visual;
@@ -1978,7 +1996,7 @@ globalClusterMembers.forEach((members, clusterId) => {
             const posNode = sType === "POSITION" ? d.source : d.target;
             const degree = posNode.degree || 0;
             
-            // Formula: Base 180px - (12px * degree). Minimo 60px.
+            // Formula: Base 160px - (15px * degree). Minimo 60px.
             const semanticSpacing = Math.max(60, 160 - (degree * 15));
             return semanticSpacing + rSource + rTarget;
         }
@@ -2016,7 +2034,8 @@ globalClusterMembers.forEach((members, clusterId) => {
     // Funzione per aggiornare il rettangolo della minimappa durante lo zoom
     updateMinimapViewport = function(t) {
         const mContainer = document.getElementById("minimap-container");
-        const mSize = mContainer ? mContainer.clientWidth : 160;
+        const mWidth = mContainer ? mContainer.clientWidth : 160;
+        const mHeight = minimapSvg.node() ? minimapSvg.node().getBoundingClientRect().height : mWidth;
         const subjectNode = globalNodes.find(n => titleAccessorGlobal(n) === "SUBJECT");
         const refX = subjectNode && subjectNode.x !== undefined ? subjectNode.x : width / 2;
         const refY = subjectNode && subjectNode.y !== undefined ? subjectNode.y : height / 2;
@@ -2030,8 +2049,8 @@ globalClusterMembers.forEach((members, clusterId) => {
 
         // Mappa le coordinate del grafo alle coordinate della minimappa
         // (0,0) del grafo -> centro della minimappa (80,80)
-        const mapX = (val) => (val - refX) * minimapScale + mSize / 2;
-        const mapY = (val) => (val - refY) * minimapScale + mSize / 2;
+        const mapX = (val) => (val - refX) * minimapScale + mWidth / 2;
+        const mapY = (val) => (val - refY) * minimapScale + mHeight / 2;
 
         const x_m = mapX(vX);
         const y_m = mapY(vY);
@@ -2512,20 +2531,27 @@ globalClusterMembers.forEach((members, clusterId) => {
         const x = d3.scaleLinear().domain(timeDomain).range([6, w - 6]);
         const y = d3.scaleSqrt().domain([0, d3.max(bins, d => d.length)]).range([h, 2]); // ScaleSqrt rende visibili anche i singoli nodi
 
-        // Per un look a step tecnico, aggiungiamo un punto finale fittizio per chiudere il grafico a zero
-        const stepData = [...bins, { x0: bins[bins.length - 1].x1, length: 0 }];
+        // Prepare data for spline: use the midpoint of each bin
+        // Add zero-points at start and end to ensure the area closes smoothly to the baseline
+        const splineData = [
+            { x: timeDomain[0], length: 0 },
+            ...bins.map(b => ({ x: (b.x0 + b.x1) / 2, length: b.length })),
+            { x: timeDomain[1], length: 0 }
+        ];
 
         const area = d3.area()
-            .curve(d3.curveStepAfter) // Trasforma la curva in gradini tecnici
-            .x(d => x(d.x0)) // Allinea l'inizio dello step al timestamp corretto
+            .curve(d3.curveMonotoneX) // Smooth spline that preserves monotonicity
+            .x(d => x(d.x))
             .y0(h)
             .y1(d => y(d.length));
 
         chartSvg.append("path")
-            .datum(stepData)
-            .attr("fill", "#007bff93") // Colore d'accento (Blu Elettrico)
-            .attr("d", area)
-            .attr("opacity", 1);
+            .datum(splineData)
+            .attr("fill", "var(--c-accent)")
+            .attr("fill-opacity", 0.3)
+            .attr("stroke", "var(--c-accent)")
+            .attr("stroke-width", 1.0)
+            .attr("d", area);
     }
 
     // Disegna il grafico dopo aver calcolato il dominio temporale

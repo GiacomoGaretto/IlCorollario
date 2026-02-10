@@ -7,35 +7,35 @@
   },
   {
     "title": "Start from the Subject",
-    "text": "The <strong>Subject</strong> (Blue) is the main topic of the discussion. Think of it as your central anchor: everything in the debate connects back to it.",
+    "text": "The <span class=\"tut-term-subject\">Subject</span> is the main topic of the discussion. Think of it as your central anchor: everything in the debate connects back to it.",
     "visual": "assets/tutorial/step_02.svg",
     "focusType": "SUBJECT",
     "annotation": "The Main Topic"
   },
   {
     "title": "Compare Positions",
-    "text": "<strong>Positions</strong> (Orange) are the main viewpoints people take. Use them to quickly compare where participants stand and how the debate branches out.",
+    "text": "<span class=\"tut-term-position\">Positions</span> are the main viewpoints people take. Use them to quickly compare where participants stand and how the debate branches out.",
     "visual": "assets/tutorial/step_03.svg",
     "focusType": "POSITION",
     "annotation": "Key Positions"
   },
   {
     "title": "Read the Arguments",
-    "text": "<strong>Arguments</strong> are <strong>human contributions</strong> written in relation to a specific position. The arguments’ authors classified each contribution as either supporting the position (<strong>IN FAVOR</strong>, Green) or challenging it (<strong>AGAINST</strong>, Red).<br><br><strong>Tip:</strong> Click any node to open its details and trace the argument back to the source.",
+    "text": "<strong>Arguments</strong> are human contributions written in relation to a specific position. The authors classified each contribution as either supporting the position (<span class=\"tut-term-infavor\">IN FAVOR</span>) or challenging it (<span class=\"tut-term-against\">AGAINST</span>).<br><br><strong>Tip:</strong> Click any node to open its details and trace the argument back to the source.",
     "visual": "assets/tutorial/step_04.svg",
     "focusType": "INFAVOR_AGAINST",
     "annotation": "Arguments (Pro/Con)"
   },
   {
     "title": "Discover Thematic Clusters",
-    "text": "<strong>Clusters</strong> (background areas) are suggested by AI. They group arguments that talk about similar themes—helping you see what the debate is really about.<br><br>Clusters are a starting point: explore inside them to confirm nuance and context.",
+    "text": "<span class=\"tut-term-cluster\">Clusters</span> (the background areas) are suggested by AI. They group arguments that talk about similar themes—helping you see what the debate is really about.<br><br>Clusters are a starting point: explore inside them to confirm nuance and context.",
     "visual": "assets/tutorial/step_05.svg",
     "focusType": "CLUSTER",
     "annotation": "Thematic Cluster"
   },
   {
     "title": "Follow Shared Keywords",
-    "text": "<strong>Keywords</strong> (Purple Diamonds) are key terms extracted by AI. They act as semantic bridges by linking arguments that use the same concept—often connecting different sides of the discussion.<br><br>Use keywords to jump across the debate and compare how a concept is used.",
+    "text": "<span class=\"tut-term-keyword\">Keywords</span> are key terms extracted by AI. They act as semantic bridges by linking arguments that use the same concept—often connecting different sides of the discussion.<br><br>Use keywords to jump across the debate and compare how a concept is used.",
     "visual": "assets/tutorial/step_06.svg",
     "focusType": "ENTITY",
     "annotation": "Semantic Bridge"
