@@ -413,7 +413,7 @@ Promise.all([
     const getLinkDashArray = d => {
         const sType = titleAccessorGlobal(nodeById.get(d.source.id || d.source));
         const tType = titleAccessorGlobal(nodeById.get(d.target.id || d.target));
-        return (sType === "ENTITY" || tType === "ENTITY") ? "4,3" : "none";
+        return (sType === "ENTITY" || tType === "ENTITY") ? "4,8" : "none";
     };
 
     getLinkOpacity = (d, active = false) => {
