@@ -840,7 +840,7 @@ globalClusterMembers.forEach((members, clusterId) => {
         if (simulation) {
             simulation.nodes(visibleNodes);
             simulation.force("link").links(physicsEdges);
-            const alpha = isTimelineUpdate ? 0.1 : 0.3;
+            const alpha = isTimelineUpdate ? 0.02 : 0.3;
             simulation.alpha(alpha).restart();
         }
 
@@ -998,7 +998,7 @@ globalClusterMembers.forEach((members, clusterId) => {
                 .strength(d => {
                     const type = titleAccessorGlobal(d);
                     if (type === "SUBJECT") return -1000; // Il centro spinge per farsi spazio
-                    if (type === "ENTITY") return -50;
+                    if (type === "ENTITY") return -80;
                     if (type === "INFAVOR" || type === "AGAINST") return -200;    // Le keyword non disturbano la struttura
                     return -400; // Posizioni e Argomenti hanno una repulsione media
                 })
@@ -1346,6 +1346,51 @@ globalClusterMembers.forEach((members, clusterId) => {
         }
     }
 
+    // --- NAVIGATION SEQUENCE HELPER ---
+    function getNavigationSequence() {
+        // 1. Get all POSITION nodes and sort by timestamp
+        const positions = globalNodes.filter(n => titleAccessorGlobal(n) === "POSITION");
+        positions.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        
+        const sequence = [];
+        const visitedArgs = new Set();
+
+        positions.forEach(pos => {
+            // Add Position
+            sequence.push(pos);
+            
+            // Find arguments linked to this position
+            const args = [];
+            globalEdges.forEach(e => {
+                const s = e.source; // Node object (after simulation init)
+                const t = e.target; // Node object
+                let neighbor = null;
+                
+                if (s.id === pos.id) neighbor = t;
+                else if (t.id === pos.id) neighbor = s;
+                
+                if (neighbor) {
+                    const type = titleAccessorGlobal(neighbor);
+                    if (type === "INFAVOR" || type === "AGAINST") {
+                        args.push(neighbor);
+                    }
+                }
+            });
+            
+            // Sort arguments by timestamp
+            args.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+            
+            args.forEach(arg => {
+                if (!visitedArgs.has(arg.id)) {
+                    sequence.push(arg);
+                    visitedArgs.add(arg.id);
+                }
+            });
+        });
+        
+        return sequence;
+    }
+
     function showNodeDetails(d) {
         const detailsCard = d3.select("#details-card");
         detailsCard.classed("visible", true);
@@ -1420,6 +1465,18 @@ globalClusterMembers.forEach((members, clusterId) => {
             .style("border", `1px solid ${hexToRgba(typeColor, 0.3)}`) // Bordo sottile coordinato
             .text(nodeType);
 
+        // Date Pill
+        const rawTypeForDate = titleAccessorGlobal(d);
+        if ((rawTypeForDate === "POSITION" || rawTypeForDate === "INFAVOR" || rawTypeForDate === "AGAINST") && d.timestamp) {
+            const dateStr = new Date(d.timestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+            typesContainer.append("span")
+                .attr("class", "pill")
+                .style("background-color", "var(--c-bg-inset)")
+                .style("border", "1px solid var(--c-border-strong)")
+                .style("color", "var(--c-text-secondary)")
+                .text(dateStr);
+        }
+
         // AI Confidence Badge (Fake data for future implementation)
         if (titleAccessorGlobal(d) === "CLUSTER" || titleAccessorGlobal(d) === "ENTITY") {
             const fakeConfidence = Math.floor(Math.random() * (98 - 82) + 82); // 82-98%
@@ -1442,13 +1499,54 @@ globalClusterMembers.forEach((members, clusterId) => {
         const textContainer = d3.select("#node-text");
         textContainer.text(displayText);
 
-        // --- ORIGINAL CONTRIBUTION BUTTON ---
-        const contentDiv = d3.select("#details-card > div:nth-child(2)");
-        contentDiv.select("#details-origin-container").remove();
-        
+        // --- ACTIONS FOOTER (Nav + Origin) ---
+        let actionsFooter = detailsCard.select("#details-actions");
+        if (actionsFooter.empty()) {
+            actionsFooter = detailsCard.append("div").attr("id", "details-actions");
+        }
+        actionsFooter.html(""); // Clear previous content
+
         const rawType = titleAccessorGlobal(d);
+        
+        // Only show navigation for Positions and Arguments
         if (rawType === "POSITION" || rawType === "INFAVOR" || rawType === "AGAINST") {
-            contentDiv.append("div")
+            const sequence = getNavigationSequence();
+            const currentIndex = sequence.findIndex(n => n.id === d.id);
+            
+            if (currentIndex !== -1) {
+                const navContainer = actionsFooter.append("div")
+                    .attr("id", "details-nav-container");
+
+                // PREVIOUS BUTTON
+                const prevBtn = navContainer.append("button")
+                    .attr("class", "details-nav-btn")
+                    .html(`<span>←</span> Previous`)
+                    .property("disabled", currentIndex === 0)
+                    .on("click", function() {
+                        const prevNode = sequence[currentIndex - 1];
+                        if (prevNode) {
+                            // Trigger click on the node to activate all selection logic
+                            nodeGroup.selectAll("path.node").filter(n => n.id === prevNode.id).dispatch("click");
+                        }
+                    });
+
+                // NEXT BUTTON
+                const nextBtn = navContainer.append("button")
+                    .attr("class", "details-nav-btn")
+                    .html(`Next <span>→</span>`)
+                    .property("disabled", currentIndex === sequence.length - 1)
+                    .on("click", function() {
+                        const nextNode = sequence[currentIndex + 1];
+                        if (nextNode) {
+                            nodeGroup.selectAll("path.node").filter(n => n.id === nextNode.id).dispatch("click");
+                        }
+                    });
+            }
+        }
+
+        // --- ORIGINAL CONTRIBUTION BUTTON ---
+        if (rawType === "POSITION" || rawType === "INFAVOR" || rawType === "AGAINST") {
+            actionsFooter.append("div")
                 .attr("id", "details-origin-container")
                 .append("button")
                 .attr("class", "origin-btn")
@@ -1463,16 +1561,18 @@ globalClusterMembers.forEach((members, clusterId) => {
                 .on("click", () => showOriginFeedback());
         }
 
-        // Ensure stats container has correct base structure (in case it was overwritten)
         const statsContainer = d3.select("#details-stats");
         if (statsContainer.select("#node-value").empty()) {
             statsContainer.html('<div class="section-title">Stats</div><div id="node-value"></div>');
         }
-
+        const statsTitle = statsContainer.select(".section-title");
         const nodeValueContainer = d3.select("#node-value");
         nodeValueContainer.html("");
 
-        if (titleAccessorGlobal(d) === "POSITION") {
+        const type = titleAccessorGlobal(d);
+
+        if (type === "POSITION") {
+            statsTitle.style("display", "block");
             let pro = 0;
             let con = 0;
             const getId = (n) => (typeof n === 'object' && n.id) ? n.id : n;
@@ -1505,16 +1605,20 @@ globalClusterMembers.forEach((members, clusterId) => {
             html += `</div>`;
             nodeValueContainer.html(html);
 
-        } else if (titleAccessorGlobal(d) === "CLUSTER") {
+        } else if (type === "CLUSTER") {
+            statsTitle.style("display", "block");
             const allMems = globalClusterMembers.get(d.id) || [];
             const visMems = allMems.filter(m => titleAccessorGlobal(m) !== "CLUSTER");
             nodeValueContainer.text(`This area groups ${visMems.length} connected argument(s).`);
+        } else if (type === "INFAVOR" || type === "AGAINST") {
+            statsTitle.style("display", "none");
         } else {
             let stats = "";
             if (d.detail__value && d.detail__value !== "") {
                 stats = `Value: ${String(d.detail__value).replace(/['"]+/g, '')}`;
             }
             nodeValueContainer.text(stats);
+            statsTitle.style("display", stats ? "block" : "none");
         }
 
         // --- CUSTOM POPUP LOGIC ---
@@ -1563,7 +1667,6 @@ globalClusterMembers.forEach((members, clusterId) => {
         // Remove previous contestation UI if present to avoid duplicates
         statsContainer.select("#contest-action-container").remove();
         
-        const type = titleAccessorGlobal(d);
         let contestHtml = "";
 
         if (type === "ENTITY") {
