@@ -413,7 +413,7 @@ Promise.all([
     const getLinkDashArray = d => {
         const sType = titleAccessorGlobal(nodeById.get(d.source.id || d.source));
         const tType = titleAccessorGlobal(nodeById.get(d.target.id || d.target));
-        return (sType === "ENTITY" || tType === "ENTITY") ? "4,3" : "none";
+        return (sType === "ENTITY" || tType === "ENTITY") ? "4,8" : "none";
     };
 
     getLinkOpacity = (d, active = false) => {
@@ -1468,7 +1468,13 @@ globalClusterMembers.forEach((members, clusterId) => {
         // Date Pill
         const rawTypeForDate = titleAccessorGlobal(d);
         if ((rawTypeForDate === "POSITION" || rawTypeForDate === "INFAVOR" || rawTypeForDate === "AGAINST") && d.timestamp) {
-            const dateStr = new Date(d.timestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+            const dateStr = new Date(d.timestamp).toLocaleString(undefined, { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
             typesContainer.append("span")
                 .attr("class", "pill")
                 .style("background-color", "var(--c-bg-inset)")
@@ -1688,7 +1694,7 @@ globalClusterMembers.forEach((members, clusterId) => {
                 contestHtml = `
                     <div id="contest-action-container">
                         <span class="section-title">Clustering Feedback</span>
-                        <p style="font-size: var(--fs-small); color: var(--c-text-secondary); margin-bottom: 10px; line-height: var(--lh-normal);">AI has grouped this argument within <strong>${clusterName}</strong>. If this thematic classification feels incorrect to you as a human participant, please flag it.</p>
+                        <p style="font-size: var(--fs-small); color: var(--c-text-secondary); margin-bottom: 10px; line-height: var(--lh-normal);">AI has grouped this argument within <strong>${clusterName}</strong>. If this thematic classification feels incorrect to you, please flag it.</p>
                         <button class="contest-btn" onclick="showContestFeedback()">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                             Contest AI Clustering
@@ -2530,7 +2536,13 @@ globalClusterMembers.forEach((members, clusterId) => {
 
         function formatTime(ts) {
             if (!ts || ts === 0) return "No Date";
-            return new Date(ts).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+            return new Date(ts).toLocaleString(undefined, { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
         }
 
         function updateTimeUI() {

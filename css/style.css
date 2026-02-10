@@ -36,8 +36,8 @@
     --color-cluster-stroke: #94a3b8;
 
     /* Colori Post-it */
-    --c-postit-bg: #e0e7f3;
-    --c-postit-border: #c8cedb;
+    --c-postit-bg: #FFEC99;
+    --c-postit-border: #F0DE90;
 
     /* ------------------------- */
     /* TIPOGRAFIA                */
@@ -92,8 +92,8 @@
     --c-border-strong: #444444;
     --c-link: #757575;
 
-    --c-postit-bg: #6d6d6d;
-    --c-postit-border: #464646;
+    --c-postit-bg: #EEDC82;
+    --c-postit-border: #D4C385;
 }
 
 * {
@@ -134,7 +134,7 @@ body {
     top: 20px;
     right: 20px;
     bottom: 20px;
-    width: 19vw;
+    width: 20vw;
     /* Larghezza fissa */
 
     /* Il container è trasparente, contiene le cards */
@@ -245,7 +245,7 @@ svg {
 }
 
 .node-label {
-    font-size: 10px;
+    font-size: var(--fs-tiny);
     pointer-events: none;
     fill: var(--c-text-secondary);
     transition: opacity 0.5s;
@@ -271,6 +271,28 @@ svg {
     overflow-y: auto;
     min-height: 0;
     padding-right: 6px;
+    
+    /* Standard properties for Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: var(--c-border-strong) transparent;
+}
+
+/* Custom Scrollbar for WebKit browsers (Chrome, Safari, Edge) */
+#node-text::-webkit-scrollbar {
+    width: 4px;
+}
+
+#node-text::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#node-text::-webkit-scrollbar-thumb {
+    background: var(--c-border-strong);
+    border-radius: 2px;
+}
+
+#node-text::-webkit-scrollbar-thumb:hover {
+    background: var(--c-accent);
 }
 
 #node-value {
@@ -456,14 +478,14 @@ svg {
 
 #details-stats {
     padding: 16px 20px;
-    background: var(--c-bg-inset);
+    background: var(--c-bg-panel);
     border-top: 1px solid var(--c-border);
     flex-shrink: 0;
 }
 
 #details-actions {
     padding: 0 20px 20px 20px; /* Padding bottom for spacing */
-    background: var(--c-bg-panel);
+    background: var(--c-bg-inset);
     border-top: 1px solid var(--c-border);
     flex-shrink: 0;
     display: flex;
@@ -770,7 +792,7 @@ svg {
 
 #tutorial-next {
     background: var(--c-text-primary);
-    color: var(--c-bg-panel);
+    color: var(--c-bg-tooltips);
     border: 1px solid var(--c-text-primary);
 }
 
@@ -1671,9 +1693,7 @@ input:checked+.slider:before {
 
 /* --- CONTEST AI BUTTON --- */
 #contest-action-container {
-    margin-top: 16px;
-    padding-top: 12px;
-    border-top: 1px dashed var(--c-border);
+    
 }
 
 .contest-btn {
@@ -1686,7 +1706,7 @@ input:checked+.slider:before {
     color: var(--color-against);
     padding: 6px 10px;
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-tiny);
     text-transform: uppercase;
     cursor: pointer;
     border-radius: 2px;
@@ -1696,8 +1716,8 @@ input:checked+.slider:before {
 }
 
 .contest-btn svg {
-    width: 12px !important;
-    height: 12px !important;
+    width: 16px !important;
+    height: 16px !important;
     flex-shrink: 0;
 }
 
@@ -1730,7 +1750,7 @@ input:checked+.slider:before {
     border: 1px solid var(--c-accent);
     color: var(--c-accent);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-tiny);
     text-transform: uppercase;
     cursor: pointer;
     border-radius: 2px;
@@ -1744,7 +1764,6 @@ input:checked+.slider:before {
     gap: 10px;
     margin-top: auto; /* Push to bottom if flex column */
     padding-top: 16px;
-    border-top: 1px solid var(--c-border);
     margin-bottom: 0; /* Space before origin btn */
 }
 
@@ -1759,7 +1778,7 @@ input:checked+.slider:before {
     border: 1px solid var(--c-border-strong);
     color: var(--c-text-primary);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-tiny);
     text-transform: uppercase;
     cursor: pointer;
     border-radius: 2px;
