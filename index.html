@@ -13,7 +13,7 @@
     <div id="graph-container">
 
 
-        
+
         <!-- Tutorial Sidebar -->
         <div id="tutorial-sidebar">
             <div id="tutorial-header">
@@ -36,7 +36,8 @@
         <div id="controls-wrapper">
             <!-- SEARCH BAR -->
             <div id="search-panel" class="nav-hidden">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
@@ -57,7 +58,8 @@
                 <div class="timeline-title">Timeline</div>
                 <div id="time-date">Start</div>
                 <div class="timeline-info">
-                    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
                         <line x1="12" y1="16" x2="12" y2="12"></line>
                         <line x1="12" y1="8" x2="12.01" y2="8"></line>
@@ -83,47 +85,51 @@
             <div class="personal-notes-header">Personal Notes</div>
             <div class="personal-notes-actions">
                 <button id="btn-add-note" class="action-btn">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="12" y1="18" x2="12" y2="12"></line>
-                        <line x1="9" y1="15" x2="15" y2="15"></line>
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <use href="assets/icons/addnote-icon.svg"></use>
                     </svg>
                     Add Note
                 </button>
                 <button id="btn-draw" class="action-btn">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
-                        <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
-                        <path d="M2 2l7.586 7.586"></path>
-                        <circle cx="11" cy="11" r="2"></circle>
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <use href="assets/icons/draw-icon.svg"></use>
                     </svg>
                     Draw
                 </button>
                 <!-- DRAWING TOOLBAR (Hidden by default) -->
                 <div id="drawing-toolbar" style="display: none;">
                     <button id="draw-pencil" class="draw-tool-btn active">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path></svg>
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                            <use href="assets/icons/draw-icon.svg"></use>
+                        </svg>
                         <div class="draw-tooltip">Pencil</div>
                     </button>
                     <button id="draw-eraser" class="draw-tool-btn">
                         <!-- Eraser Icon -->
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none"><path d="M18.5 2.5L9 12l-1.5-1.5 9.5-9.5 1.5 1.5zm-11 11l-5 5L5 21h5l5-5-5-5z"/></svg>
+                        <svg viewBox="0 0 24 24" width="24" height="24">
+                            <use href="assets/icons/erase-icon.svg"></use>
+                        </svg>
                         <div class="draw-tooltip">Eraser</div>
                     </button>
                     <button id="draw-undo" class="draw-tool-btn">
                         <!-- Undo Icon -->
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                        <svg viewBox="0 0 24 24" width="24" height="24">
+                            <use href="assets/icons/undo-icon.svg"></use>
+                        </svg>
                         <div class="draw-tooltip">Undo</div>
                     </button>
                     <button id="draw-trash" class="draw-tool-btn">
                         <!-- Trash Icon -->
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        <svg viewBox="0 0 24 24" width="24" height="24">
+                            <use href="assets/icons/delete-icon.svg"></use>
+                        </svg>
                         <div class="draw-tooltip">Clear All</div>
                     </button>
                     <button id="draw-close" class="draw-tool-btn">
                         <!-- X Icon -->
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <svg viewBox="0 0 24 24" width="24" height="24">
+                            <use href="assets/icons/close-icon.svg"></use>
+                        </svg>
                         <div class="draw-tooltip">Close</div>
                     </button>
                 </div>
@@ -158,14 +164,15 @@
 
         <!-- MINIMAP -->
         <div id="minimap-container" class="nav-hidden">
+            <div class="minimap-header">Minimap</div>
             <svg id="minimap"></svg>
         </div>
 
         <!-- THEME TOGGLE BUTTON -->
         <div id="theme-toggle-container" class="nav-hidden side-control-container">
             <button id="theme-settings-btn" class="time-btn">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-11.314l.707.707m11.314 11.314l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                    <use href="assets/icons/theme-icon.svg"></use>
                 </svg>
             </button>
             <div class="reset-tooltip">Theme Settings</div>
@@ -184,10 +191,8 @@
                 <button class="export-opt" onclick="exportGraph('svg')">SVG</button>
             </div>
             <button id="export-view-btn" class="time-btn">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                    <use href="assets/icons/export-icon.svg"></use>
                 </svg>
             </button>
             <div class="reset-tooltip">Export View</div>
@@ -196,9 +201,8 @@
         <!-- ZOOM IN BUTTON -->
         <div id="zoom-in-container" class="nav-hidden side-control-container">
             <button id="zoom-in-btn" class="time-btn">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                    <use href="assets/icons/zoomin-icon.svg"></use>
                 </svg>
             </button>
             <div class="reset-tooltip">Zoom In</div>
@@ -207,8 +211,8 @@
         <!-- ZOOM OUT BUTTON -->
         <div id="zoom-out-container" class="nav-hidden side-control-container">
             <button id="zoom-out-btn" class="time-btn">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                    <use href="assets/icons/zoomout-icon.svg"></use>
                 </svg>
             </button>
             <div class="reset-tooltip">Zoom Out</div>
@@ -217,8 +221,8 @@
         <!-- RESET VIEW BUTTON -->
         <div id="reset-view-container" class="nav-hidden side-control-container">
             <button id="reset-view-btn" class="time-btn">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M15 3h6v6M9 21H3v-6M21 15v6h-6M3 9V3h6M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                    <use href="assets/icons/resize-icon.svg"></use>
                 </svg>
             </button>
             <div class="reset-tooltip">Fit to Screen</div>
@@ -231,41 +235,56 @@
     </div>
 
     <aside id="info-panel" class="collapsed">
-        
+
 
         <!-- LEGENDA  -->
         <div id="legend-card" class="panel-card">
             <div id="legend-title">
                 <span>Legend</span>
                 <button id="legend-toggle-btn" class="panel-toggle-btn">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
                 </button>
             </div>
             <div id="legend">
                 <!-- Sezione 1: Node Types -->
                 <div class="legend-section">
                     <div class="legend-item">
-                        <div class="legend-symbol"><div class="symbol-cluster"></div></div>
+                        <div class="legend-symbol">
+                            <div class="symbol-cluster"></div>
+                        </div>
                         <div class="legend-label-group"><span class="label-main">Cluster Area</span></div>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-symbol"><div class="symbol-inner symbol-circle bg-subject"></div></div>
+                        <div class="legend-symbol">
+                            <div class="symbol-inner symbol-circle bg-subject"></div>
+                        </div>
                         <div class="legend-label-group"><span class="label-main">Subject</span></div>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-symbol"><div class="symbol-inner symbol-circle bg-position"></div></div>
+                        <div class="legend-symbol">
+                            <div class="symbol-inner symbol-circle bg-position"></div>
+                        </div>
                         <div class="legend-label-group"><span class="label-main">Position</span></div>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-symbol"><div class="symbol-inner symbol-circle bg-infavor"></div></div>
+                        <div class="legend-symbol">
+                            <div class="symbol-inner symbol-circle bg-infavor"></div>
+                        </div>
                         <div class="legend-label-group"><span class="label-main">In Favor</span></div>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-symbol"><div class="symbol-inner symbol-circle bg-against"></div></div>
+                        <div class="legend-symbol">
+                            <div class="symbol-inner symbol-circle bg-against"></div>
+                        </div>
                         <div class="legend-label-group"><span class="label-main">Against</span></div>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-symbol"><div class="symbol-inner symbol-diamond bg-keyword"></div></div>
+                        <div class="legend-symbol">
+                            <div class="symbol-inner symbol-diamond bg-keyword"></div>
+                        </div>
                         <div class="legend-label-group"><span class="label-main">Keyword</span></div>
                     </div>
                 </div>
@@ -276,16 +295,26 @@
                 <div class="legend-section">
                     <div class="section-title">How to read</div>
                     <div class="legend-item">
-                        <div class="legend-symbol"><svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></div>
-                        <div class="legend-label-group"><span class="label-main">Size</span><span class="label-sub">Number of connections</span></div>
+                        <div class="legend-symbol"><svg viewBox="0 0 18 18">
+                                <circle cx="9" cy="9" r="5" fill="none" stroke="currentColor" stroke-width="1.5" />
+                            </svg></div>
+                        <div class="legend-label-group"><span class="label-main">Size</span><span
+                                class="label-sub">Number of connections</span></div>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-symbol"><svg viewBox="0 0 18 18"><line x1="3" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="2"/></svg></div>
-                        <div class="legend-label-group"><span class="label-main">Solid Line</span><span class="label-sub">Human-contribution link</span></div>
+                        <div class="legend-symbol"><svg viewBox="0 0 18 18">
+                                <line x1="3" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="2" />
+                            </svg></div>
+                        <div class="legend-label-group"><span class="label-main">Solid Line</span><span
+                                class="label-sub">Human-contribution link</span></div>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-symbol"><svg viewBox="0 0 18 18"><line x1="3" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="2" stroke-dasharray="3,2"/></svg></div>
-                        <div class="legend-label-group"><span class="label-main">Dashed Line</span><span class="label-sub">AI-generated link</span></div>
+                        <div class="legend-symbol"><svg viewBox="0 0 18 18">
+                                <line x1="3" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="2"
+                                    stroke-dasharray="3,2" />
+                            </svg></div>
+                        <div class="legend-label-group"><span class="label-main">Dashed Line</span><span
+                                class="label-sub">AI-generated link</span></div>
                     </div>
                 </div>
             </div>
@@ -305,7 +334,7 @@
                 <div id="node-title"></div>
                 <div id="node-text"></div>
             </div>
-            <div id="details-stats"> 
+            <div id="details-stats">
                 <div class="section-title">Stats</div>
                 <div id="node-value"></div>
             </div>
