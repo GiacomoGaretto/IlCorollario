@@ -988,9 +988,9 @@ globalClusterMembers.forEach((members, clusterId) => {
                 .distance(getLinkDistance)
                 .strength(d => {
                     // Legami strutturali più rigidi, menzioni più elastiche
-                    if (d.mainStat === "HAS_POSITION") return 0.7;
-                    if (d.mainStat === "MENTION") return 0.2;
-                    return 0.4;
+                    if (d.mainStat === "HAS_POSITION") return 0.9;
+                    if (d.mainStat === "MENTION") return 0.25;
+                    return 0.5;
                 })
             )
             // Repulsione (Charge) bilanciata per gerarchia
@@ -998,14 +998,15 @@ globalClusterMembers.forEach((members, clusterId) => {
                 .strength(d => {
                     const type = titleAccessorGlobal(d);
                     if (type === "SUBJECT") return -1000; // Il centro spinge per farsi spazio
-                    if (type === "ENTITY") return -50;    // Le keyword non disturbano la struttura
-                    return -300; // Posizioni e Argomenti hanno una repulsione media
+                    if (type === "ENTITY") return -50;
+                    if (type === "INFAVOR" || type === "AGAINST") return -200;    // Le keyword non disturbano la struttura
+                    return -400; // Posizioni e Argomenti hanno una repulsione media
                 })
                 .distanceMax(500)
             )
             // Forza centripeta differenziata (mantiene il Soggetto al centro)
-            .force("x", d3.forceX(width / 2).strength(d => titleAccessorGlobal(d) === "SUBJECT" ? 0.5 : 0.05))
-            .force("y", d3.forceY(height / 2).strength(d => titleAccessorGlobal(d) === "SUBJECT" ? 0.5 : 0.05))
+            .force("x", d3.forceX(width / 2).strength(d => titleAccessorGlobal(d) === "SUBJECT" ? 0.5 : 0.01))
+            .force("y", d3.forceY(height / 2).strength(d => titleAccessorGlobal(d) === "SUBJECT" ? 0.5 : 0.01))
             .force("collision", collisionForce)
             .force("clustering", createClusteringForce())
             .on("tick", ticked);
@@ -1067,8 +1068,8 @@ globalClusterMembers.forEach((members, clusterId) => {
         const cy = height / 2;
 
         // Rimosso forceCenter per evitare sbalzi (jitter) quando compaiono nuovi nodi periferici
-        simulation.force("x", d3.forceX(cx).strength(d => titleAccessorGlobal(d) === "SUBJECT" ? 0.5 : 0.05));
-        simulation.force("y", d3.forceY(cy).strength(d => titleAccessorGlobal(d) === "SUBJECT" ? 0.5 : 0.05));
+        simulation.force("x", d3.forceX(cx).strength(d => titleAccessorGlobal(d) === "SUBJECT" ? 0.5 : 0.01));
+        simulation.force("y", d3.forceY(cy).strength(d => titleAccessorGlobal(d) === "SUBJECT" ? 0.5 : 0.01));
         simulation.alpha(0.3).restart();
     };
 
@@ -1937,8 +1938,8 @@ globalClusterMembers.forEach((members, clusterId) => {
         interactive = true;
         expandInfoPanel();
         resetHighlight();
-        resetZoom();
-        updateSimulationCenter(false);
+        resetZoomToFit();
+        updateSimulationCenter(true);
         updateGraphDepth(3); // Reset to full view
         depthNav.classList.remove('nav-hidden');
         // Mostra timeline
@@ -1971,7 +1972,7 @@ globalClusterMembers.forEach((members, clusterId) => {
         const tType = titleAccessor(d.target);
 
         // 1. Cluster Internal (Coesione MASSIMA)
-        if (sType === "CLUSTER" || tType === "CLUSTER") return 15;
+        if (sType === "CLUSTER" || tType === "CLUSTER") return 5;
 
         // 2. Entity Logic
         if (sType === "ENTITY" || tType === "ENTITY") {
@@ -1981,10 +1982,10 @@ globalClusterMembers.forEach((members, clusterId) => {
             if (ent._open) return 100;
 
             // B. Se Chiusa (Rombo) E connessa a 1 solo nodo: Molto vicina
-            if (ent.degree === 1) return 1;
+            if (ent.degree === 1) return 5;
 
             // C. Se Chiusa ma connessa a più nodi: Distanza standard (per non tirare troppo il grafo)
-            return 35;
+            return 5;
         }
 
         const rSource = getNodeVisualRadius(d.source || {});
@@ -1997,12 +1998,12 @@ globalClusterMembers.forEach((members, clusterId) => {
             const degree = posNode.degree || 0;
             
             // Formula: Base 160px - (15px * degree). Minimo 60px.
-            const semanticSpacing = Math.max(60, 160 - (degree * 15));
+            const semanticSpacing = Math.max(1, 160 - (degree * 15));
             return semanticSpacing + rSource + rTarget;
         }
 
-        // 4. Struttura Gerarchica Standard (Fallback)
-        return 100 + rSource + rTarget;
+        // 4. lunghezza link arguments - positions
+        return 60 + rSource + rTarget;
     }
 
     // Init
