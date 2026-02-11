@@ -26,6 +26,9 @@
     --c-accent-hover: #0056b3;
     --c-accent-text: #ffffff;
 
+    /* AI Color */
+    --c-ai: #6f42c1;
+
     /* Colori Nodi (Sincronizzati con il Grafo) */
     --color-subject: #3f88c5;
     --color-position: #F49D37;
@@ -175,7 +178,7 @@ body {
     border-radius: 2px;
     /* Square technical look */
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-tiny);
     background: transparent;
     border: 1px solid var(--c-border-strong);
     color: var(--c-text-secondary);
@@ -313,7 +316,7 @@ svg {
     background: transparent;
     border: 1px solid var(--c-border-strong);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-small);
     font-weight: var(--fw-medium);
     margin-right: 6px;
     margin-bottom: 4px;
@@ -344,7 +347,7 @@ svg {
     padding: 8px 12px;
     border-radius: 0;
     border: 1px solid var(--c-border);
-    font-size: 11px;
+    font-size: var(--fs-small);
     max-width: 260px;
     line-height: var(--lh-tight);
     box-shadow: none;
@@ -459,7 +462,7 @@ svg {
 
 #user-name {
     font-family: var(--font-mono);
-    font-size: var(--fs-base);
+    font-size: var(--fs-h2);
     font-weight: var(--fw-medium);
     color: var(--c-text-primary);
 }
@@ -495,12 +498,22 @@ svg {
 /* Tipografia Dettagli (Richiesta: testo più grande) */
 #details-card .section-title {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-tiny);
     font-weight: var(--fw-bold);
     color: var(--c-text-muted);
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    margin-bottom: 8px;
+    margin-bottom: 0px;
+}
+
+#details-card .section-title-ai {
+    font-family: var(--font-mono);
+    font-size: var(--fs-tiny);
+    font-weight: var(--fw-bold);
+    color: var(--c-ai);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0px;
 }
 
 /* legenda */
@@ -1668,7 +1681,7 @@ input:checked+.slider:before {
 
 .wiki-disclaimer {
     font-family: var(--font-sans);
-    font-size: 10px;
+    font-size: var(--fs-tiny);
     color: var(--c-text-muted);
     margin-top: 6px;
     line-height: var(--lh-tight);
@@ -1873,7 +1886,7 @@ input:checked+.slider:before {
     color: var(--c-bg-panel);
     border: 1px solid var(--c-text-primary);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-tiny);
     text-transform: uppercase;
     cursor: pointer;
     border-radius: 2px;
@@ -1982,6 +1995,11 @@ input:checked+.slider:before {
 
 .tut-term-cluster {
     color: var(--color-cluster-stroke);
+    font-weight: var(--fw-bold);
+}
+
+.ai-text {
+    color: var(--c-ai);
     font-weight: var(--fw-bold);
 }
 
@@ -2111,6 +2129,7 @@ input:checked+.slider:before {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    margin-top: 6px;
 }
 
 .stats-label {
