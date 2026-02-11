@@ -1311,6 +1311,11 @@ svg {
     display: flex;
     width: 100%;
     gap: 4px;
+    --tooltip-margin: var(--panel-gap); /* Default margin (Palette Closed) */
+}
+
+#drawing-toolbar.palette-open {
+    --tooltip-margin: calc(var(--panel-gap) * 2 + 36px); /* Shift right when Palette is Open */
 }
 
 .draw-tool-btn {
@@ -1375,23 +1380,23 @@ svg {
 /* Calculated to align all tooltips to the right of the 200px panel */
 
 #draw-pencil .draw-tooltip {
-    left: calc(500% + 36px);
+    left: calc(500% + 16px + var(--tooltip-margin));
 }
 
 #draw-eraser .draw-tooltip {
-    left: calc(400% + 32px);
+    left: calc(400% + 12px + var(--tooltip-margin));
 }
 
 #draw-undo .draw-tooltip {
-    left: calc(300% + 28px);
+    left: calc(300% + 8px + var(--tooltip-margin));
 }
 
 #draw-trash .draw-tooltip {
-    left: calc(200% + 24px);
+    left: calc(200% + 4px + var(--tooltip-margin));
 }
 
 #draw-close .draw-tooltip {
-    left: calc(100% + 20px);
+    left: calc(100% + var(--tooltip-margin));
 }
 
 .draw-tool-btn:hover .draw-tooltip {
@@ -1686,7 +1691,6 @@ input:checked+.slider:before {
 /* --- DRAWINGS LAYER --- */
 .drawing-path {
     fill: none;
-    stroke: var(--c-text-primary);
     stroke-linecap: round;
     stroke-linejoin: round;
 }
@@ -2092,6 +2096,108 @@ input:checked+.slider:before {
        can be tricky, so we rely on stroke/glow for feedback */
 }
 
+/* --- STATS CARD STYLES (Subject Node) --- */
+.stats-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.stats-timeline-box {
+    padding: 10px;
+    background: var(--c-bg-inset);
+    border: 1px solid var(--c-border);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.stats-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--fs-tiny);
+    color: var(--c-text-muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    line-height: 1;
+}
+
+.stats-value-date {
+    font-family: var(--font-mono);
+    font-size: var(--fs-small);
+    color: var(--c-text-primary);
+    white-space: nowrap;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.stats-box {
+    padding: 10px;
+    background: var(--c-bg-panel);
+    border: 1px solid var(--c-border);
+    display: flex;
+    flex-direction: column;
+}
+
+.stats-value-count {
+    font-family: var(--font-mono);
+    font-size: var(--fs-h1);
+    font-weight: var(--fw-bold);
+}
+
+/* --- DRAWING COLOR PALETTE --- */
+#drawing-color-palette {
+    position: fixed;
+    width: 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 0;
+    background: var(--c-bg-panel);
+    border: 1px solid var(--c-border-strong);
+    backdrop-filter: blur(var(--panel-blur));
+    z-index: 7900;
+    border-radius: 2px;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-10px);
+}
+
+#drawing-color-palette.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+}
+
+.color-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 0.5px solid transparent;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    background-clip: padding-box;
+}
+
+.color-swatch:hover {
+    transform: scale(1.15);
+}
+
+.color-swatch.active {
+    border-color: transparent;
+    transform: scale(1.1);
+    box-shadow: 0 0 0 2px var(--c-text-primary);
+}
+
 /* --- RESPONSIVE DESIGN --- */
 
 /* Compact Desktop / Large Tablet Landscape (max-width: 1280px) */
@@ -2173,6 +2279,14 @@ input:checked+.slider:before {
 
     #search-panel {
         height: 48px;
+    }
+
+    #drawing-color-palette {
+        width: 48px;
+    }
+
+    #drawing-toolbar.palette-open {
+        --tooltip-margin: calc(var(--panel-gap) * 2 + 48px);
     }
 
     /* Scale Icons */

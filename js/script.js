@@ -110,6 +110,22 @@ function alignLayout() {
         btn.style.bottom = `${posBottom}px`;
         btn.style.left = `${sideLeft}px`;
     });
+
+    // 3. Align Drawing Color Palette (Right of Personal Notes)
+    const palette = document.getElementById("drawing-color-palette");
+    if (palette && notes) {
+        // Align bottom with personal notes
+        palette.style.bottom = notes.style.bottom;
+
+        // Sync height with personal notes
+        palette.style.height = `${notes.offsetHeight}px`;
+        
+        // Align left: Minimap Left + Minimap Width + Gap
+        const mWidth = parseFloat(mStyle.width) || 0;
+        const mLeft = parseFloat(mStyle.left) || 0;
+        
+        palette.style.left = `${mLeft + mWidth + gap}px`;
+    }
 }
 
 // Observer to handle layout changes when minimap or panels resize (e.g. via CSS or content)
@@ -242,6 +258,9 @@ Promise.all([
         console.warn("Tutorial data vuoto o non valido.");
     }
 
+    titleAccessorGlobal = d => d.title || d.detail__title || "Untitled";
+    const titleAccessor = titleAccessorGlobal;
+
     // --- Creazione Mappa Autori ---
     // Usiamo la variabile globale authorMap definita sopra
     if (Array.isArray(authorsData)) {
@@ -314,6 +333,35 @@ Promise.all([
         });
     }
 
+    // Fix temporale: Assicura che gli argomenti non compaiano prima delle posizioni
+    // Deve avvenire PRIMA del calcolo del dominio temporale
+    const tempNodeMap = new Map(nodes.map(n => [n.id, n]));
+    for (let i = 0; i < 3; i++) {
+        edges.forEach(e => {
+            const s = tempNodeMap.get(e.source);
+            const t = tempNodeMap.get(e.target);
+            if (!s || !t || !s.timestamp || !t.timestamp) return;
+
+            const sType = titleAccessorGlobal(s);
+            const tType = titleAccessorGlobal(t);
+
+            // 1. Position -> Argument
+            if (sType === "POSITION" && (tType === "INFAVOR" || tType === "AGAINST")) {
+                if (t.timestamp < s.timestamp) t.timestamp = s.timestamp;
+            } else if (tType === "POSITION" && (sType === "INFAVOR" || sType === "AGAINST")) {
+                if (s.timestamp < t.timestamp) s.timestamp = t.timestamp;
+            }
+
+            // 2. Parent -> Entity (Keyword)
+            // Keywords shouldn't appear before the node that generated them
+            if (sType !== "ENTITY" && tType === "ENTITY") {
+                if (t.timestamp < s.timestamp) t.timestamp = s.timestamp;
+            } else if (tType !== "ENTITY" && sType === "ENTITY") {
+                if (s.timestamp < t.timestamp) s.timestamp = t.timestamp;
+            }
+        });
+    }
+
     // Calcola dominio temporale
     nodes.filter(n => n.timestamp).forEach(n => {
         if (n.timestamp < minTs) minTs = n.timestamp;
@@ -334,9 +382,6 @@ Promise.all([
     const MS_PER_DAY = 24 * 60 * 60 * 1000;
     const debateDays = (timeDomain[1] - timeDomain[0]) / MS_PER_DAY;
     animationDuration = Math.min(90000, Math.max(5000, debateDays * 1000));
-
-    titleAccessorGlobal = d => d.title || d.detail__title || "Untitled";
-    const titleAccessor = titleAccessorGlobal;
 
     globalNodes = nodes;
     globalEdges = edges;
@@ -1257,6 +1302,9 @@ globalClusterMembers.forEach((members, clusterId) => {
     svg.on("click", (event) => {
         if (event.defaultPrevented) return; // Prevent physics update if panning/zooming
 
+        // Prevent background click actions (reset/restart) when in drawing mode
+        if (isDrawingMode) return;
+
         if (isAddingPostit) {
             const coords = d3.pointer(event, g.node());
             createPostit(coords[0], coords[1]);
@@ -1611,12 +1659,62 @@ globalClusterMembers.forEach((members, clusterId) => {
             html += `</div>`;
             nodeValueContainer.html(html);
 
+        } else if (type === "SUBJECT") {
+            statsTitle.style("display", "block");
+
+            // Helper per formattare date (dd/mm/yyyy)
+            const formatDate = (ts) => {
+                if (!ts) return "N/A";
+                const d = new Date(ts);
+                return d.toLocaleDateString('en-GB');
+            };
+            const dateRange = `${formatDate(timeDomain[0])} - ${formatDate(timeDomain[1])}`;
+
+            // Calcolo conteggi totali
+            const nPos = globalNodes.filter(n => titleAccessorGlobal(n) === "POSITION").length;
+            const nArgs = globalNodes.filter(n => {
+                const t = titleAccessorGlobal(n);
+                return t === "INFAVOR" || t === "AGAINST";
+            }).length;
+            const nClust = globalNodes.filter(n => titleAccessorGlobal(n) === "CLUSTER").length;
+            const nEnt = globalNodes.filter(n => titleAccessorGlobal(n) === "ENTITY").length;
+
+            // Costruzione HTML
+            let html = `<div class="stats-container">`;
+            
+            // Riga Date
+            html += `
+                <div class="stats-timeline-box">
+                    <span class="stats-label">Timeline Range</span>
+                    <span class="stats-value-date">${dateRange}</span>
+                </div>
+            `;
+
+            // Griglia Statistiche
+            html += `<div class="stats-grid">`;
+            
+            const createStatBox = (label, count, color) => `
+                <div class="stats-box">
+                    <span class="stats-label">${label}</span>
+                    <span class="stats-value-count" style="color: ${color};">${count}</span>
+                </div>
+            `;
+
+            html += createStatBox("Positions", nPos, colorMap["POSITION"]);
+            html += createStatBox("Arguments", nArgs, "var(--c-text-primary)"); 
+            html += createStatBox("Clusters", nClust, "#7b91b3"); 
+            html += createStatBox("Entities", nEnt, colorMap["ENTITY"]);
+            
+            html += `</div></div>`;
+            
+            nodeValueContainer.html(html);
+
         } else if (type === "CLUSTER") {
             statsTitle.style("display", "block");
             const allMems = globalClusterMembers.get(d.id) || [];
             const visMems = allMems.filter(m => titleAccessorGlobal(m) !== "CLUSTER");
             nodeValueContainer.text(`This area groups ${visMems.length} connected argument(s).`);
-        } else if (type === "INFAVOR" || type === "AGAINST") {
+        } else if (type === "INFAVOR" || type === "AGAINST" || type === "ENTITY") {
             statsTitle.style("display", "none");
         } else {
             let stats = "";
@@ -2376,13 +2474,18 @@ globalClusterMembers.forEach((members, clusterId) => {
             const realDrawings = document.querySelectorAll(".drawing-path");
             const cloneDrawings = cloneDrawingGroup.querySelectorAll(".drawing-path");
             
-            const isDarkMode = document.body.classList.contains("dark-mode");
-            const strokeColor = isDarkMode ? "#e0e0e0" : "#1a1a1a";
-
             cloneDrawings.forEach((path, i) => {
+                const realPath = realDrawings[i];
+                let stroke = realPath.getAttribute("stroke") || "var(--c-text-primary)";
+                
+                // Resolve CSS variable if present to ensure correct color in export
+                if (stroke.includes("var(")) {
+                    stroke = getComputedStyle(document.body).getPropertyValue('--c-text-primary').trim();
+                }
+
                 path.setAttribute("fill", "none");
-                path.setAttribute("stroke", strokeColor);
-                path.setAttribute("stroke-width", "2");
+                path.setAttribute("stroke", stroke);
+                path.setAttribute("stroke-width", "3");
                 path.setAttribute("stroke-linecap", "round");
                 path.setAttribute("stroke-linejoin", "round");
             });
@@ -2639,7 +2742,7 @@ globalClusterMembers.forEach((members, clusterId) => {
         const binGenerator = d3.bin()
             .value(d => d.timestamp)
             .domain(timeDomain)
-            .thresholds(40); // Numero di intervalli
+            .thresholds(Math.floor(w / 8)); // Dynamic resolution: ~1 bin every 8px
 
         const bins = binGenerator(nodes.filter(n => n.timestamp));
 
@@ -2651,7 +2754,11 @@ globalClusterMembers.forEach((members, clusterId) => {
         // Add zero-points at start and end to ensure the area closes smoothly to the baseline
         const splineData = [
             { x: timeDomain[0], length: 0 },
-            ...bins.map(b => ({ x: (b.x0 + b.x1) / 2, length: b.length })),
+            ...bins.map(b => {
+                // Use mean timestamp for better alignment, fallback to midpoint if empty
+                const xPos = b.length > 0 ? d3.mean(b, d => d.timestamp) : (b.x0 + b.x1) / 2;
+                return { x: xPos, length: b.length };
+            }),
             { x: timeDomain[1], length: 0 }
         ];
 
@@ -2689,14 +2796,19 @@ globalClusterMembers.forEach((members, clusterId) => {
             if (tContested) tContested.checked = false;
             if (tLone) tLone.checked = false;
 
+            // Escape special regex characters to prevent errors
+            const safeTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // Use word boundary to avoid matching substrings inside words (e.g. "ai" in "available")
+            const regex = new RegExp(`\\b${safeTerm}`, 'i');
+
             const filterFn = (d) => {
-                const title = (d.detail__title || "").toLowerCase();
-                const text = (d.detail__text || "").toLowerCase();
-                const val = (d.detail__value || "").toLowerCase(); // per le keyword
-                const type = (titleAccessorGlobal(d) || "").toLowerCase();
+                const title = (d.detail__title || "");
+                const text = (d.detail__text || "");
+                const val = (d.detail__value || ""); // per le keyword
+                const type = (titleAccessorGlobal(d) || "");
                 
                 // Cerca nel titolo, testo, valore (entity) o tipo
-                return title.includes(term) || text.includes(term) || val.includes(term) || type.includes(term);
+                return regex.test(title) || regex.test(text) || regex.test(val) || regex.test(type);
             };
 
             highlightNodes(filterFn);
@@ -2855,6 +2967,45 @@ globalClusterMembers.forEach((members, clusterId) => {
     let currentTool = 'pencil'; // 'pencil' or 'eraser'
     let drawingHistory = []; // Stack of path elements
     let currentPath = null;
+    let currentDrawingColor = "var(--c-text-primary)"; // Default color
+
+    // --- CREATE COLOR PALETTE DYNAMICALLY ---
+    const paletteContainer = document.createElement("div");
+    paletteContainer.id = "drawing-color-palette";
+    document.body.appendChild(paletteContainer);
+
+    const drawingColors = [
+        { color: "var(--c-text-primary)", label: "Black" }, // Adaptive Black/White
+        { color: "#db3a34", label: "Red" },
+        { color: "#00cc66", label: "Green" },
+        { color: "#007AFF", label: "Blue" }
+    ];
+
+    drawingColors.forEach((c, index) => {
+        const swatch = document.createElement("div");
+        swatch.className = "color-swatch";
+        swatch.style.backgroundColor = c.color;
+        swatch.title = c.label;
+        
+        if (index === 0) swatch.classList.add("active");
+
+        swatch.addEventListener("click", (e) => {
+            e.stopPropagation();
+            currentDrawingColor = c.color;
+            
+            // Update UI
+            document.querySelectorAll(".color-swatch").forEach(s => s.classList.remove("active"));
+            swatch.classList.add("active");
+
+            // If we click a color, ensure we are in pencil mode
+            if (currentTool !== 'pencil') {
+                setDrawingTool('pencil');
+            }
+        });
+
+        paletteContainer.appendChild(swatch);
+    });
+    // ----------------------------------------
 
     function toggleDrawingMode(active) {
         isDrawingMode = active;
@@ -2870,6 +3021,8 @@ globalClusterMembers.forEach((members, clusterId) => {
             document.body.style.cursor = "default";
             // Clear drawings on exit (Trash behavior)
             // clearDrawings(); // Removed: Close button just closes, doesn't clear automatically unless requested
+            document.getElementById("drawing-color-palette").classList.remove("visible");
+            if (drawingToolbar) drawingToolbar.classList.remove("palette-open");
         }
     }
 
@@ -2880,12 +3033,18 @@ globalClusterMembers.forEach((members, clusterId) => {
         if (tool === 'pencil') btnDrawPencil.classList.add('active');
         if (tool === 'eraser') btnDrawEraser.classList.add('active');
         
+        const palette = document.getElementById("drawing-color-palette");
+
         if (tool === 'pencil') {
             document.body.style.cursor = "crosshair";
+            palette.classList.add("visible");
+            if (drawingToolbar) drawingToolbar.classList.add("palette-open");
         } else if (tool === 'eraser') {
             const isDarkMode = document.body.classList.contains("dark-mode");
             const strokeColor = isDarkMode ? "white" : "black";
             document.body.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="${strokeColor}" stroke-width="2"/></svg>') 12 12, auto`;
+            palette.classList.remove("visible");
+            if (drawingToolbar) drawingToolbar.classList.remove("palette-open");
         }
     }
 
@@ -2919,6 +3078,9 @@ globalClusterMembers.forEach((members, clusterId) => {
     svg.on("mousedown.draw", function(event) {
         if (!isDrawingMode) return;
 
+        // Stop simulation to prevent nodes from moving while drawing
+        if (simulation) simulation.stop();
+
         const coords = d3.pointer(event, drawingGroup.node());
 
         if (currentTool === 'eraser') {
@@ -2935,7 +3097,8 @@ globalClusterMembers.forEach((members, clusterId) => {
                 .attr("class", "drawing-path")
                 .attr("d", lineGenerator)
                 .attr("stroke-width", 3)
-                .attr("fill", "none");
+                .attr("fill", "none")
+                .attr("stroke", currentDrawingColor); // Use selected color
             
             drawingHistory.push(currentPath.node());
         }
