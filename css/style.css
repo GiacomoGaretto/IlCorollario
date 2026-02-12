@@ -1935,7 +1935,7 @@ input:checked+.slider:before {
 
 .postit-close {
     cursor: pointer;
-    color: var(--c-text-secondary);
+    color: #1a1a1a;
     font-weight: bold;
     font-size: 14px;
     line-height: 1;
@@ -1956,7 +1956,7 @@ input:checked+.slider:before {
     padding: 8px;
     font-family: var(--font-sans);
     font-size: var(--fs-tiny);
-    color: var(--c-text-primary);
+    color: #1a1a1a;
     line-height: var(--lh-tight);
     box-sizing: border-box;
 }
