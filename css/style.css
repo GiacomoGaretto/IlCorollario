@@ -3,15 +3,15 @@
     /* PALETTE (Monocromatica + Accento) */
     /* ------------------------- */
     /* Sfondi */
-    --c-bg-main: #f8f8f8;
+    --c-bg-main: hsl(0, 0%, 94%);
     --c-bg-panel: rgba(255, 255, 255, 0.65);
     --c-bg-tooltips: #ffffff;
-    --c-bg-inset: #f0f0f0;
+    --c-bg-inset: hsl(0, 0%, 90%);
     /* Per sfondi interni come code blocks o stats */
 
     /* Testo */
     --c-text-primary: #1a1a1a;
-    --c-text-secondary: #666666;
+    --c-text-secondary: hsl(0, 0%, 30%);
     --c-text-muted: #999999;
     --c-text-inverted: #ffffff;
 
@@ -36,7 +36,7 @@
     --color-against: #db3a34;
     --color-keyword: #B38CB4;
     --color-cluster-fill: #e2e8f0;
-    --color-cluster-stroke: #94a3b8;
+    --color-cluster-stroke: #4d545e;
 
     /* Colori Post-it */
     --c-postit-bg: #FFEC99;
@@ -55,12 +55,12 @@
     /* 28px */
     --fs-h2: 1.25rem;
     /* 20px */
-    --fs-base: 0.9375rem;
-    /* 15px - Testo principale */
-    --fs-small: 0.8125rem;
-    /* 13px - Testo secondario */
-    --fs-tiny: 0.75rem;
-    /* 12px - Legende, etichette */
+    --fs-base: 1rem;
+    /* 16px - Testo principale */
+    --fs-small: 0.889rem;
+    /* 14px - Testo secondario */
+    --fs-tiny: 0.79rem;
+    /* 12.5px - Legende, etichette */
 
     /* Pesi */
     --fw-regular: 400;
@@ -269,7 +269,7 @@ svg {
     font-family: var(--font-sans);
     font-size: var(--fs-base);
     line-height: var(--lh-normal);
-    color: var(--c-text-secondary);
+    color: var(--c-text-primary);
     flex: 1;
     overflow-y: auto;
     min-height: 0;
@@ -698,7 +698,7 @@ svg {
 
 #tutorial-heading {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--fs-tiny);
     font-weight: var(--fw-bold);
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -710,7 +710,7 @@ svg {
     border: 1px solid var(--c-border-strong);
     color: var(--c-text-secondary);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--fs-tiny);
     cursor: pointer;
     text-decoration: none;
     text-transform: uppercase;
@@ -748,9 +748,9 @@ svg {
     margin-bottom: 8px;
     flex-shrink: 0;
     font-family: var(--font-sans);
-    font-size: 1.05rem;
+    font-size: var(--fs-base);
     line-height: var(--lh-normal);
-    color: var(--c-text-secondary);
+    color: var(--c-text-primary);
 }
 
 .tutorial-visual {
@@ -995,7 +995,7 @@ svg {
     left: 10px;
     opacity: 0;
     transition: opacity 0.3s;
-    font-size: 11px;
+    font-size: var(--fs-tiny);
     text-transform: none;
     font-weight: 400;
     pointer-events: none;
@@ -2001,6 +2001,11 @@ input:checked+.slider:before {
 .ai-text {
     color: var(--c-ai);
     font-weight: var(--fw-bold);
+}
+
+.ai-text-p {
+    color: var(--c-ai);
+    font-weight: var(--fw-regular);
 }
 
 /* Resize Handles */
