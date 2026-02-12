@@ -2368,20 +2368,69 @@ globalClusterMembers.forEach((members, clusterId) => {
         const serializer = new XMLSerializer();
 
         // 1. Calcola i confini di TUTTA la rete (non solo la vista corrente)
-        const padding = 60;
-        const nodesForBounds = globalNodes.filter(d => d.x !== undefined);
-        if (nodesForBounds.length === 0) return;
-
-        const xMin = d3.min(nodesForBounds, d => d.x - 50);
-        const yMin = d3.min(nodesForBounds, d => d.y - 50);
-        const xMax = d3.max(nodesForBounds, d => d.x + 50);
-        const yMax = d3.max(nodesForBounds, d => d.y + 50);
+        const padding = 40;
         
-        const bW = (xMax - xMin) || 100;
-        const bH = (yMax - yMin) || 100;
+        let xMin = Infinity;
+        let yMin = Infinity;
+        let xMax = -Infinity;
+        let yMax = -Infinity;
+
+        // A. NODI VISIBILI
+        const visibleNodes = d3.selectAll("path.node").data();
+        if (visibleNodes.length > 0) {
+            xMin = d3.min(visibleNodes, d => d.x - getNodeVisualRadius(d));
+            yMin = d3.min(visibleNodes, d => d.y - getNodeVisualRadius(d));
+            xMax = d3.max(visibleNodes, d => d.x + getNodeVisualRadius(d));
+            yMax = d3.max(visibleNodes, d => d.y + getNodeVisualRadius(d));
+        }
+
+        // B. POST-ITS
+        d3.selectAll(".postit-object").each(function(d) {
+            if (d) {
+                if (d.x < xMin) xMin = d.x;
+                if (d.y < yMin) yMin = d.y;
+                if (d.x + d.width > xMax) xMax = d.x + d.width;
+                if (d.y + d.height > yMax) yMax = d.y + d.height;
+            }
+        });
+
+        // C. DISEGNI
+        d3.selectAll(".drawing-path").each(function(d) {
+            if (Array.isArray(d)) {
+                d.forEach(p => {
+                    if (p[0] < xMin) xMin = p[0];
+                    if (p[1] < yMin) yMin = p[1];
+                    if (p[0] > xMax) xMax = p[0];
+                    if (p[1] > yMax) yMax = p[1];
+                });
+            }
+        });
+
+        // Fallback se non c'è nulla di visibile
+        if (xMin === Infinity) {
+            const nodesForBounds = globalNodes.filter(d => d.x !== undefined);
+            if (nodesForBounds.length > 0) {
+                xMin = d3.min(nodesForBounds, d => d.x - getNodeVisualRadius(d));
+                yMin = d3.min(nodesForBounds, d => d.y - getNodeVisualRadius(d));
+                xMax = d3.max(nodesForBounds, d => d.x + getNodeVisualRadius(d));
+                yMax = d3.max(nodesForBounds, d => d.y + getNodeVisualRadius(d));
+            } else {
+                xMin = 0; yMin = 0; xMax = 100; yMax = 100;
+            }
+        }
+
+        const bW = (xMax - xMin);
+        const bH = (yMax - yMin);
 
         // 2. Prepara il clone dell'SVG
         const clone = svgEl.cloneNode(true);
+        
+        // Reset transform to ensure 1:1 export regardless of current zoom/pan
+        const cloneG = clone.querySelector("g");
+        if (cloneG) {
+            cloneG.setAttribute("transform", "");
+        }
+
         clone.setAttribute("viewBox", `${xMin - padding} ${yMin - padding} ${bW + padding * 2} ${bH + padding * 2}`);
         clone.setAttribute("width", bW + padding * 2);
         clone.setAttribute("height", bH + padding * 2);
