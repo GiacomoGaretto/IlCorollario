@@ -577,7 +577,7 @@ globalClusterMembers.forEach((members, clusterId) => {
                 .attr("class", "entity-hover-label")
                 .attr("text-anchor", "middle")
                 .attr("alignment-baseline", "middle")
-                .style("font-size", "11px")
+                .style("font-size", "var(--fs-tiny)")
                 .style("font-weight", "500")
                 .style("pointer-events", "none")
                 .text(truncate(d.detail__value, 24));
@@ -1268,8 +1268,8 @@ globalClusterMembers.forEach((members, clusterId) => {
         return `
             ${typeHTML}
             ${titleHTML}
-            <div style="font-size: 11px; margin-bottom: 8px; line-height: var(--lh-tight); color: var(--c-text-primary); font-family: var(--font-sans);">${escapeHTML(truncate(text, 140))}</div>
-            <div style="font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; opacity: 0.6; border-top: 1px solid var(--c-border); padding-top: 4px; color: var(--c-text-secondary);">Click for details</div>
+            <div style="font-size: var(--fs-small); margin-bottom: 8px; line-height: var(--lh-tight); color: var(--c-text-primary); font-family: var(--font-sans);">${escapeHTML(truncate(text, 70))}</div>
+            <div style="font-family: var(--font-mono); font-size: var(--fs-tiny); text-transform: uppercase; opacity: 1; border-top: 1px solid var(--c-border); padding-top: 4px; color: var(--c-text-secondary);">Click for details</div>
         `;
     }
 
@@ -1536,8 +1536,8 @@ globalClusterMembers.forEach((members, clusterId) => {
             const fakeConfidence = Math.floor(Math.random() * (98 - 82) + 82); // 82-98%
             typesContainer.append("span")
                 .attr("class", "pill ai-confidence")
-                .style("border-color", "var(--c-accent)")
-                .style("color", "var(--c-accent)")
+                .style("border-color", "var(--c-ai)")
+                .style("color", "var(--c-ai)")
                 .text(`AI CONFIDENCE: ${fakeConfidence}%`);
         }
 
@@ -1649,7 +1649,7 @@ globalClusterMembers.forEach((members, clusterId) => {
                 return `
                     <div style="flex: 1; display: flex; flex-direction: column; padding: 12px; background: var(--c-bg-panel); border: 1px solid var(--c-border);">
                         <span style="font-family: var(--font-mono); font-size: var(--fs-small); color: var(--c-text-muted); text-transform: uppercase; margin-bottom: 4px;">${label}</span>
-                        <span style="font-family: var(--font-mono); font-size: 18px; font-weight: var(--fw-bold); color: ${color};">${count}</span>
+                        <span style="font-family: var(--font-mono); font-size: var(--fs-h2); font-weight: var(--fw-bold); color: ${color};">${count}</span>
                     </div>`;
             };
 
@@ -1776,8 +1776,8 @@ globalClusterMembers.forEach((members, clusterId) => {
         if (type === "ENTITY") {
             contestHtml = `
                 <div id="contest-action-container">
-                    <span class="section-title">Semantic Bridge Integrity</span>
-                    <p style="font-size: var(--fs-small); color: var(--c-text-secondary); margin-bottom: 10px; line-height: var(--lh-normal);">This keyword was extracted by AI to link different parts of the debate. If you find this concept irrelevant or believe it creates a "false relation" between arguments, you can contest it.</p>
+                    <span class="section-title-ai">Semantic Bridge Integrity</span>
+                    <p style="font-size: var(--fs-small); color: var(--c-text-secondary); margin-bottom: 10px; line-height: var(--lh-normal);">This keyword was extracted by <span class=\"ai-text-p\">AI</span> to link different parts of the debate. If you find this concept irrelevant or believe it creates a "false relation" between arguments, you can contest it.</p>
                     <button class="contest-btn" onclick="showContestFeedback()">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                         Contest Keyword Extraction
@@ -1791,8 +1791,8 @@ globalClusterMembers.forEach((members, clusterId) => {
                 const clusterName = clusterNode ? (clusterNode.detail__tagline || "this thematic area") : "this thematic area";
                 contestHtml = `
                     <div id="contest-action-container">
-                        <span class="section-title">Clustering Feedback</span>
-                        <p style="font-size: var(--fs-small); color: var(--c-text-secondary); margin-bottom: 10px; line-height: var(--lh-normal);">AI has grouped this argument within <strong>${clusterName}</strong>. If this thematic classification feels incorrect to you, please flag it.</p>
+                        <span class="section-title-ai">Clustering Feedback</span>
+                        <p style="font-size: var(--fs-small); color: var(--c-text-secondary); margin-bottom: 10px; line-height: var(--lh-normal);"><span class=\"ai-text-p\">AI</span> has has grouped this argument within <strong>${clusterName}</strong>. If this thematic classification feels incorrect to you, please flag it.</p>
                         <button class="contest-btn" onclick="showContestFeedback()">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                             Contest AI Clustering
@@ -2427,7 +2427,7 @@ globalClusterMembers.forEach((members, clusterId) => {
                 text.setAttribute("x", 8);
                 text.setAttribute("y", 28);
                 text.setAttribute("font-family", "sans-serif");
-                text.setAttribute("font-size", "12");
+                text.setAttribute("font-size", "var(--fs-base)");
                 text.setAttribute("fill", "#333");
 
                 const charsPerLine = Math.floor((d.width - 16) / 7); // Stima caratteri per riga
@@ -2498,7 +2498,7 @@ globalClusterMembers.forEach((members, clusterId) => {
         style.textContent = `
             .node { stroke-width: 2px; }
             .link { stroke: ${resolvedLinkColor}; stroke-linecap: round; }
-            .node-label { font-family: 'Inter', sans-serif; font-size: 10px; fill: #666; }
+            .node-label { font-family: 'Inter', sans-serif; font-size: var(--fs-tiny); fill: #666; }
             .hull { stroke-width: 1px; fill-opacity: 0.25; }
             .selection-ring { 
                 fill: none !important; 
@@ -3269,7 +3269,7 @@ globalClusterMembers.forEach((members, clusterId) => {
             div.append("div")
                 .attr("class", `link-handle lh-${pos}`)
                 .on("mouseover", function(event) {
-                    tooltip.style("opacity", 1).html(`<div style="font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; color: var(--c-text-primary);">Drag to link</div>`);
+                    tooltip.style("opacity", 1).html(`<div style="font-family: var(--font-mono); font-size: var(--fs-tiny); text-transform: uppercase; color: var(--c-text-primary);">Drag to link</div>`);
                     moveTooltip(event);
                 })
                 .on("mousemove", moveTooltip)
@@ -3374,7 +3374,7 @@ globalClusterMembers.forEach((members, clusterId) => {
                                     tooltip.style("opacity", 0);
                                 })
                                 .on("mouseover", function(event) {
-                                    tooltip.style("opacity", 1).html(`<div style="font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; color: var(--c-text-primary);">Right-click to remove</div>`);
+                                    tooltip.style("opacity", 1).html(`<div style="font-family: var(--font-mono); font-size: var(--fs-tiny); text-transform: uppercase; color: var(--c-text-primary);">Right-click to remove</div>`);
                                     moveTooltip(event);
                                 })
                                 .on("mousemove", moveTooltip)

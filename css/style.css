@@ -3,15 +3,15 @@
     /* PALETTE (Monocromatica + Accento) */
     /* ------------------------- */
     /* Sfondi */
-    --c-bg-main: #f8f8f8;
+    --c-bg-main: hsl(0, 0%, 94%);
     --c-bg-panel: rgba(255, 255, 255, 0.65);
     --c-bg-tooltips: #ffffff;
-    --c-bg-inset: #f0f0f0;
+    --c-bg-inset: hsl(0, 0%, 90%);
     /* Per sfondi interni come code blocks o stats */
 
     /* Testo */
     --c-text-primary: #1a1a1a;
-    --c-text-secondary: #666666;
+    --c-text-secondary: hsl(0, 0%, 30%);
     --c-text-muted: #999999;
     --c-text-inverted: #ffffff;
 
@@ -26,6 +26,9 @@
     --c-accent-hover: #0056b3;
     --c-accent-text: #ffffff;
 
+    /* AI Color */
+    --c-ai: #6f42c1;
+
     /* Colori Nodi (Sincronizzati con il Grafo) */
     --color-subject: #3f88c5;
     --color-position: #F49D37;
@@ -33,7 +36,7 @@
     --color-against: #db3a34;
     --color-keyword: #B38CB4;
     --color-cluster-fill: #e2e8f0;
-    --color-cluster-stroke: #94a3b8;
+    --color-cluster-stroke: #4d545e;
 
     /* Colori Post-it */
     --c-postit-bg: #FFEC99;
@@ -52,12 +55,12 @@
     /* 28px */
     --fs-h2: 1.25rem;
     /* 20px */
-    --fs-base: 0.9375rem;
-    /* 15px - Testo principale */
-    --fs-small: 0.8125rem;
-    /* 13px - Testo secondario */
-    --fs-tiny: 0.75rem;
-    /* 12px - Legende, etichette */
+    --fs-base: 1rem;
+    /* 16px - Testo principale */
+    --fs-small: 0.889rem;
+    /* 14px - Testo secondario */
+    --fs-tiny: 0.79rem;
+    /* 12.5px - Legende, etichette */
 
     /* Pesi */
     --fw-regular: 400;
@@ -175,7 +178,7 @@ body {
     border-radius: 2px;
     /* Square technical look */
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-tiny);
     background: transparent;
     border: 1px solid var(--c-border-strong);
     color: var(--c-text-secondary);
@@ -266,7 +269,7 @@ svg {
     font-family: var(--font-sans);
     font-size: var(--fs-base);
     line-height: var(--lh-normal);
-    color: var(--c-text-secondary);
+    color: var(--c-text-primary);
     flex: 1;
     overflow-y: auto;
     min-height: 0;
@@ -313,7 +316,7 @@ svg {
     background: transparent;
     border: 1px solid var(--c-border-strong);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-small);
     font-weight: var(--fw-medium);
     margin-right: 6px;
     margin-bottom: 4px;
@@ -344,7 +347,7 @@ svg {
     padding: 8px 12px;
     border-radius: 0;
     border: 1px solid var(--c-border);
-    font-size: 11px;
+    font-size: var(--fs-small);
     max-width: 260px;
     line-height: var(--lh-tight);
     box-shadow: none;
@@ -459,7 +462,7 @@ svg {
 
 #user-name {
     font-family: var(--font-mono);
-    font-size: var(--fs-base);
+    font-size: var(--fs-h2);
     font-weight: var(--fw-medium);
     color: var(--c-text-primary);
 }
@@ -495,12 +498,22 @@ svg {
 /* Tipografia Dettagli (Richiesta: testo più grande) */
 #details-card .section-title {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-tiny);
     font-weight: var(--fw-bold);
     color: var(--c-text-muted);
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    margin-bottom: 8px;
+    margin-bottom: 0px;
+}
+
+#details-card .section-title-ai {
+    font-family: var(--font-mono);
+    font-size: var(--fs-tiny);
+    font-weight: var(--fw-bold);
+    color: var(--c-ai);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0px;
 }
 
 /* legenda */
@@ -685,7 +698,7 @@ svg {
 
 #tutorial-heading {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--fs-tiny);
     font-weight: var(--fw-bold);
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -697,7 +710,7 @@ svg {
     border: 1px solid var(--c-border-strong);
     color: var(--c-text-secondary);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--fs-tiny);
     cursor: pointer;
     text-decoration: none;
     text-transform: uppercase;
@@ -735,9 +748,9 @@ svg {
     margin-bottom: 8px;
     flex-shrink: 0;
     font-family: var(--font-sans);
-    font-size: 1.05rem;
+    font-size: var(--fs-base);
     line-height: var(--lh-normal);
-    color: var(--c-text-secondary);
+    color: var(--c-text-primary);
 }
 
 .tutorial-visual {
@@ -982,7 +995,7 @@ svg {
     left: 10px;
     opacity: 0;
     transition: opacity 0.3s;
-    font-size: 11px;
+    font-size: var(--fs-tiny);
     text-transform: none;
     font-weight: 400;
     pointer-events: none;
@@ -1668,7 +1681,7 @@ input:checked+.slider:before {
 
 .wiki-disclaimer {
     font-family: var(--font-sans);
-    font-size: 10px;
+    font-size: var(--fs-tiny);
     color: var(--c-text-muted);
     margin-top: 6px;
     line-height: var(--lh-tight);
@@ -1873,7 +1886,7 @@ input:checked+.slider:before {
     color: var(--c-bg-panel);
     border: 1px solid var(--c-text-primary);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-tiny);
     text-transform: uppercase;
     cursor: pointer;
     border-radius: 2px;
@@ -1983,6 +1996,16 @@ input:checked+.slider:before {
 .tut-term-cluster {
     color: var(--color-cluster-stroke);
     font-weight: var(--fw-bold);
+}
+
+.ai-text {
+    color: var(--c-ai);
+    font-weight: var(--fw-bold);
+}
+
+.ai-text-p {
+    color: var(--c-ai);
+    font-weight: var(--fw-regular);
 }
 
 /* Resize Handles */
@@ -2111,6 +2134,7 @@ input:checked+.slider:before {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    margin-top: 6px;
 }
 
 .stats-label {
