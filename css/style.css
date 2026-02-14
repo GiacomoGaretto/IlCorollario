@@ -261,7 +261,7 @@ svg {
     color: var(--c-text-primary);
     line-height: 1.1;
     letter-spacing: -0.02em;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     flex-shrink: 0;
 }
 
@@ -325,7 +325,7 @@ svg {
 
 .pill.ai-confidence {
     margin-left: 4px;
-    background: rgba(255, 255, 255, 0.5);
+    background: color-mix(in srgb, var(--c-ai), transparent 85%) !important;
 }
 
 /* --- STILE PER LE AREE CLUSTER (HULLS) --- */
@@ -452,7 +452,7 @@ svg {
     height: 32px;
     background: var(--c-bg-inset);
     border: 1px solid var(--c-border);
-    border-radius: 0;
+    border-radius: 50%;
     /* Square avatar */
     display: flex;
     align-items: center;
@@ -503,7 +503,7 @@ svg {
     color: var(--c-text-muted);
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    margin-bottom: 0px;
+    margin-bottom: 8px;
 }
 
 #details-card .section-title-ai {
@@ -901,16 +901,43 @@ svg {
 
 /* --- STILI BARRA DI NAVIGAZIONE (LIVELI) --- */
 #depth-nav {
-    background: var(--c-bg-panel);
     border: 1px solid var(--c-border-strong);
     border-radius: 0;
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
     padding: 4px;
-    gap: 4px;
+    gap: 0;
     box-shadow: none;
     transition: opacity 0.5s ease, transform 0.5s ease;
     backdrop-filter: blur(var(--panel-blur));
+    /* Tint to create the "light gray rectangle" look while keeping transparency */
+    background: 
+        linear-gradient(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.05)) content-box,
+        linear-gradient(var(--c-bg-panel), var(--c-bg-panel)) border-box;
+    background-repeat: no-repeat;
+    position: relative;
+    isolation: isolate;
 }
+
+/* Sliding Indicator */
+#depth-nav::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc((100% - 8px) / 3);
+    background: var(--c-accent);
+    border-radius: 2px;
+    z-index: -1;
+    transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.2, 1);
+    pointer-events: none;
+}
+
+/* Slider Positions */
+#depth-nav[data-level="1"]::before { transform: translateX(0%); }
+#depth-nav[data-level="2"]::before { transform: translateX(100%); }
+#depth-nav[data-level="3"]::before { transform: translateX(200%); }
 
 /* Stato nascosto della nav bar (durante il tutorial) */
 #depth-nav.nav-hidden {
@@ -1033,6 +1060,14 @@ svg {
     transition: background 0.2s;
 }
 
+/* Fix for Safari: Ensure fill color is inherited by external SVG references */
+.time-btn svg,
+.time-btn svg use,
+.action-btn svg use,
+.draw-tool-btn svg use {
+    fill: currentColor !important;
+}
+
 .time-btn svg {
     width: 16px !important;
     height: 16px !important;
@@ -1140,22 +1175,24 @@ svg {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--c-text-secondary);
-    background: transparent;
-    border: 1px solid transparent;
+    background: transparent !important;
+    border: none;
     cursor: pointer;
     transition: all 0.2s;
+    width: 100%;
+    text-align: center;
+    box-shadow: none !important;
 }
 
 .nav-btn:hover {
-    background: var(--c-bg-inset);
+    background: transparent;
     color: var(--c-text-primary);
 }
 
 .nav-btn.active {
-    background: var(--c-accent);
     color: var(--c-accent-text);
-    border-color: var(--c-border);
-    box-shadow: none;
+    background: transparent;
+    border-color: transparent;
 }
 
 /* --- SEARCH BAR --- */
@@ -1557,22 +1594,6 @@ input:checked+.slider:before {
     align-items: center;
 }
 
-#theme-switch-wrapper {
-    display: none;
-    position: absolute;
-    left: 46px;
-    background: var(--c-bg-panel);
-    border: 1px solid var(--c-border-strong);
-    padding: 0 12px;
-    z-index: 8001;
-    align-items: center;
-    height: 36px;
-}
-
-#theme-switch-wrapper.active {
-    display: flex;
-}
-
 #export-menu.active {
     display: flex;
 }
@@ -1627,10 +1648,6 @@ input:checked+.slider:before {
     pointer-events: none;
     border: 1px solid var(--c-border);
     z-index: 10001;
-}
-
-#theme-toggle-container:has(#theme-switch-wrapper.active) .reset-tooltip {
-    left: 110px;
 }
 
 #export-view-container:has(#export-menu.active) .reset-tooltip {
@@ -1763,9 +1780,9 @@ input:checked+.slider:before {
     gap: 8px;
     width: 100%;
     padding: 10px;
-    background: transparent;
+    background: var(--c-accent);
     border: 1px solid var(--c-accent);
-    color: var(--c-accent);
+    color: var(--c-accent-text);
     font-family: var(--font-mono);
     font-size: var(--fs-tiny);
     text-transform: uppercase;
@@ -1816,8 +1833,8 @@ input:checked+.slider:before {
 }
 
 .origin-btn:hover {
-    background: var(--c-accent);
-    color: #fff;
+    background: var(--c-bg-tooltips);
+    color: var(--c-accent);
 }
 
 .origin-btn svg {
