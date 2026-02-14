@@ -187,11 +187,15 @@ window.updateGraphDepth = function() {};
 let selectedNodeData = null;
 let selectionRing;
 
+let activeHighlightFilter = null;
+
 // --- HIGHLIGHT FUNCTIONS ---
 function highlightNodes(filterFn) {
+    activeHighlightFilter = filterFn;
     // 1. Update NODI
     // Selezioniamo solo i path con classe .node, escludendo l'anello di selezione
     nodeGroup.selectAll("path.node").transition().duration(400)
+        .attr("opacity", d => titleAccessorGlobal(d) === "CLUSTER" ? 0 : 1) // Ensure base opacity is 1
         .attr("fill-opacity", d => (filterFn(d) ? 1 : 0.15))
         .attr("stroke-opacity", d => (filterFn(d) ? 1 : 0.1));
 
@@ -221,7 +225,9 @@ function highlightNodes(filterFn) {
 }
 
 function resetHighlight() {
+    activeHighlightFilter = null;
     nodeGroup.selectAll("path.node").transition().duration(400)
+        .attr("opacity", d => titleAccessorGlobal(d) === "CLUSTER" ? 0 : 1) // Reset base opacity
         .attr("fill-opacity", 1)
         .attr("stroke-opacity", 1);
 
@@ -724,11 +730,11 @@ globalClusterMembers.forEach((members, clusterId) => {
     const hullPadding = 20;
     const curve = d3.line().curve(d3.curveBasisClosed);
 
-    function getHullPath(clusterNode) {
+    function getHullPoints(clusterNode) {
         const allMembers = clusterMembers.get(clusterNode.id) || [];
         const visibleMembers = allMembers.filter(m => titleAccessor(m) !== "CLUSTER");
 
-        if (visibleMembers.length === 0) return "";
+        if (visibleMembers.length === 0) return [];
 
         const points = [];
         visibleMembers.forEach(m => {
@@ -740,8 +746,37 @@ globalClusterMembers.forEach((members, clusterId) => {
             points.push([m.x, m.y + r]);
         });
 
-        const hullPoints = d3.polygonHull(points);
-        return hullPoints ? curve(hullPoints) : "";
+        return d3.polygonHull(points) || [];
+    }
+
+    function getHullPath(clusterNode) {
+        const hullPoints = getHullPoints(clusterNode);
+        return hullPoints.length ? curve(hullPoints) : "";
+    }
+
+    // Helper per calcolare intersezione linea-poligono (per link post-it -> cluster)
+    function getLineIntersection(p1, p2, p3, p4) {
+        const x1 = p1[0], y1 = p1[1], x2 = p2[0], y2 = p2[1];
+        const x3 = p3[0], y3 = p3[1], x4 = p4[0], y4 = p4[1];
+        const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+        if (denom === 0) return null;
+        const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+        const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+        if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1) return [x1 + ua * (x2 - x1), y1 + ua * (y2 - y1)];
+        return null;
+    }
+
+    function getPolygonIntersection(p1, p2, polygon) {
+        let bestIntersect = null;
+        let minDist = Infinity;
+        for (let i = 0; i < polygon.length; i++) {
+            const intersect = getLineIntersection(p1, p2, polygon[i], polygon[(i + 1) % polygon.length]);
+            if (intersect) {
+                const dist = (intersect[0] - p1[0]) ** 2 + (intersect[1] - p1[1]) ** 2;
+                if (dist < minDist) { minDist = dist; bestIntersect = intersect; }
+            }
+        }
+        return bestIntersect;
     }
 
     const hullData = nodes.filter(d => titleAccessor(d) === "CLUSTER");
@@ -837,6 +872,10 @@ globalClusterMembers.forEach((members, clusterId) => {
                 if ((idx + 1) === level) btn.classList.add('active');
                 else btn.classList.remove('active');
             });
+
+            // Update slider position
+            const navContainer = document.getElementById("depth-nav");
+            if (navContainer) navContainer.dataset.level = level;
         }
 
         // Hybrid Visibility Logic con filtro temporale
@@ -915,7 +954,7 @@ globalClusterMembers.forEach((members, clusterId) => {
 
         // Staggered appearance for new nodes
         const isTutorialOpen = !document.getElementById("tutorial-sidebar").classList.contains('tutorial-closed');
-        const shouldStagger = isTimelineUpdate && !isTutorialOpen;
+        const shouldStagger = isTimelineUpdate && !isTutorialOpen && isPlaying;
 
         const enterSize = nodeEnter.size();
         const staggerDelay = shouldStagger ? (enterSize > 50 ? 5 : 10) : 0;
@@ -923,7 +962,13 @@ globalClusterMembers.forEach((members, clusterId) => {
         nodeEnter.transition()
             .duration(0)
             .delay((d, i) => i * staggerDelay)
-            .attr("opacity", d => titleAccessorGlobal(d) === "CLUSTER" ? 0 : 1);
+            .attr("opacity", d => titleAccessorGlobal(d) === "CLUSTER" ? 0 : 1)
+            .attr("fill-opacity", d => {
+                return activeHighlightFilter ? (activeHighlightFilter(d) ? 1 : 0.15) : 1;
+            })
+            .attr("stroke-opacity", d => {
+                return activeHighlightFilter ? (activeHighlightFilter(d) ? 1 : 0.1) : 1;
+            });
 
         // Rebind delle labels
         const labelSelection = labelGroup.selectAll("text.node-label").data(visibleNodes, d => d.id);
@@ -941,7 +986,7 @@ globalClusterMembers.forEach((members, clusterId) => {
             .transition()
             .duration(0)
             .delay((d, i) => i * staggerDelay)
-            .attr("opacity", 1);
+            .attr("opacity", d => activeHighlightFilter ? (activeHighlightFilter(d) ? 1 : 0.1) : 1);
 
         // Rebind dei link
         const linkSelection = linkGroup.selectAll("line").data(renderEdges, d => `${d.source.id || d.source}-${d.target.id || d.target}`);
@@ -955,7 +1000,15 @@ globalClusterMembers.forEach((members, clusterId) => {
             .transition()
             .duration(0)
             .delay((d, i) => i * staggerDelay)
-            .attr("stroke-opacity", d => getLinkOpacity(d));
+            .attr("stroke-opacity", d => {
+                if (activeHighlightFilter) {
+                    const s = d.source.id ? d.source : nodeById.get(d.source);
+                    const t = d.target.id ? d.target : nodeById.get(d.target);
+                    if (s && t && activeHighlightFilter(s) && activeHighlightFilter(t)) return getLinkOpacity(d, true);
+                    return 0.02;
+                }
+                return getLinkOpacity(d);
+            });
 
         // Aggiorna hulls
         const hullData = visibleNodes.filter(d => titleAccessorGlobal(d) === "CLUSTER");
@@ -964,9 +1017,18 @@ globalClusterMembers.forEach((members, clusterId) => {
         
         const hullOpacity = d => {
             const members = globalClusterMembers.get(d.id) || [];
-            // La hull compare solo quando TUTTI i nodi che contiene sono comparsi nella timeline
-            const allMembersAppeared = members.every(m => !m.timestamp || m.timestamp <= currentTime);
-            return allMembersAppeared ? 1 : 0;
+            
+            // Filtra solo i nodi argomento per la condizione di comparsa
+            const argMembers = members.filter(m => {
+                const t = titleAccessorGlobal(m);
+                return t === "INFAVOR" || t === "AGAINST";
+            });
+
+            // Se il cluster contiene argomenti, basiamo la visibilità su di essi
+            const nodesToCheck = argMembers.length > 0 ? argMembers : members;
+
+            const allAppeared = nodesToCheck.every(m => !m.timestamp || m.timestamp <= currentTime);
+            return allAppeared ? 1 : 0;
         };
 
         hullSelection
@@ -980,8 +1042,8 @@ globalClusterMembers.forEach((members, clusterId) => {
             .attr("class", "hull")
             .attr("fill", d => getClusterColor(d).fill)
             .attr("stroke", d => getClusterColor(d).stroke)
-            .attr("fill-opacity", 0.25)
-            .attr("stroke-opacity", 0.75)
+            .attr("fill-opacity", d => activeHighlightFilter ? (activeHighlightFilter(d) ? 0.5 : 0.1) : 0.25)
+            .attr("stroke-opacity", d => activeHighlightFilter ? (activeHighlightFilter(d) ? 1.0 : 0.2) : 0.75)
             .style("opacity", hullOpacity) // L'opacità iniziale è gestita qui
             .style("pointer-events", function(d) {
                 return hullOpacity(d) == 0 ? "none" : "all";
@@ -1165,11 +1227,26 @@ globalClusterMembers.forEach((members, clusterId) => {
                 }
             });
 
+            let finalTargetX = d.target.x;
+            let finalTargetY = d.target.y;
+
+            // Se il target è un CLUSTER, calcola l'intersezione con l'area (hull)
+            if (titleAccessorGlobal(d.target) === "CLUSTER") {
+                const hullPoly = getHullPoints(d.target);
+                if (hullPoly.length > 0) {
+                    const intersect = getPolygonIntersection(bestCoords, [d.target.x, d.target.y], hullPoly);
+                    if (intersect) {
+                        finalTargetX = intersect[0];
+                        finalTargetY = intersect[1];
+                    }
+                }
+            }
+
             d3.select(this).selectAll("line")
                 .attr("x1", bestCoords[0])
                 .attr("y1", bestCoords[1])
-                .attr("x2", d.target.x)
-                .attr("y2", d.target.y);
+                .attr("x2", finalTargetX)
+                .attr("y2", finalTargetY);
         });
 
         // Aggiorna posizione Anello di Selezione
@@ -1549,7 +1626,10 @@ globalClusterMembers.forEach((members, clusterId) => {
             (d.detail__summary || d.detail__text || "") :
             (d.detail__text || "");
 
-        d3.select("#node-title").text(displayTitle);
+        d3.select("#node-title")
+            .text(displayTitle)
+            .style("display", displayTitle ? "block" : "none");
+            
         const textContainer = d3.select("#node-text");
         textContainer.text(displayText);
 
@@ -1703,7 +1783,7 @@ globalClusterMembers.forEach((members, clusterId) => {
             html += createStatBox("Positions", nPos, colorMap["POSITION"]);
             html += createStatBox("Arguments", nArgs, "var(--c-text-primary)"); 
             html += createStatBox("Clusters", nClust, "#7b91b3"); 
-            html += createStatBox("Entities", nEnt, colorMap["ENTITY"]);
+            html += createStatBox("Keywords", nEnt, colorMap["ENTITY"]);
             
             html += `</div></div>`;
             
@@ -1712,8 +1792,28 @@ globalClusterMembers.forEach((members, clusterId) => {
         } else if (type === "CLUSTER") {
             statsTitle.style("display", "block");
             const allMems = globalClusterMembers.get(d.id) || [];
-            const visMems = allMems.filter(m => titleAccessorGlobal(m) !== "CLUSTER");
-            nodeValueContainer.text(`This area groups ${visMems.length} connected argument(s).`);
+            
+            let inFavor = 0;
+            let against = 0;
+            allMems.forEach(m => {
+                const t = titleAccessorGlobal(m);
+                if (t === "INFAVOR") inFavor++;
+                if (t === "AGAINST") against++;
+            });
+
+            const createPill = (count, label, color) => {
+                return `
+                    <div style="flex: 1; display: flex; flex-direction: column; padding: 12px; background: var(--c-bg-panel); border: 1px solid var(--c-border);">
+                        <span style="font-family: var(--font-mono); font-size: var(--fs-small); color: var(--c-text-muted); text-transform: uppercase; margin-bottom: 4px;">${label}</span>
+                        <span style="font-family: var(--font-mono); font-size: var(--fs-h2); font-weight: var(--fw-bold); color: ${color};">${count}</span>
+                    </div>`;
+            };
+
+            let html = `<div style="display: flex; gap: 10px; width: 100%;">`;
+            html += createPill(inFavor, "INFAVOUR", colorMap["INFAVOR"]);
+            html += createPill(against, "AGAINST", colorMap["AGAINST"]);
+            html += `</div>`;
+            nodeValueContainer.html(html);
         } else if (type === "INFAVOR" || type === "AGAINST" || type === "ENTITY") {
             statsTitle.style("display", "none");
         } else {
@@ -2337,25 +2437,11 @@ globalClusterMembers.forEach((members, clusterId) => {
 
     // --- THEME TOGGLE LOGIC ---
     const themeSettingsBtn = document.getElementById("theme-settings-btn");
-    const themeSwitchWrapper = document.getElementById("theme-switch-wrapper");
-    const darkModeToggle = document.getElementById("dark-mode-toggle");
 
-    if (themeSettingsBtn && themeSwitchWrapper) {
+    if (themeSettingsBtn) {
         themeSettingsBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            themeSwitchWrapper.classList.toggle("active");
-        });
-        document.addEventListener("click", () => themeSwitchWrapper.classList.remove("active"));
-        themeSwitchWrapper.addEventListener("click", (e) => e.stopPropagation());
-    }
-
-    if (darkModeToggle) {
-        darkModeToggle.addEventListener("change", (e) => {
-            if (e.target.checked) {
-                document.body.classList.add("dark-mode");
-            } else {
-                document.body.classList.remove("dark-mode");
-            }
+            document.body.classList.toggle("dark-mode");
+            
             // Update eraser cursor if active to maintain visibility
             if (isDrawingMode && currentTool === 'eraser') {
                 setDrawingTool('eraser');
@@ -2541,6 +2627,7 @@ globalClusterMembers.forEach((members, clusterId) => {
         }
 
         const resolvedLinkColor = getComputedStyle(document.documentElement).getPropertyValue('--c-link').trim() || "#bbb";
+        const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--c-accent').trim() || "#007AFF";
 
         // 3. Iniezione stili espliciti (risolve il problema dei cerchi neri e variabili CSS)
         const style = document.createElement("style");
@@ -2554,6 +2641,12 @@ globalClusterMembers.forEach((members, clusterId) => {
                 stroke: #007AFF !important; 
                 stroke-width: 1.5px !important; 
                 stroke-dasharray: 8, 4 !important; 
+            }
+            .postit-link-visual { 
+                stroke: ${accentColor} !important; 
+                stroke-width: 2px !important; 
+                stroke-dasharray: 5, 3 !important; 
+                fill: none !important;
             }
             /* Assicura che i colori dei nodi siano preservati */
             path[fill^="rgba"] { fill-opacity: 1; }
@@ -2729,7 +2822,21 @@ globalClusterMembers.forEach((members, clusterId) => {
             if (isPlaying) stopPlay();
         });
 
+        timeSlider.addEventListener("change", (e) => {
+            setTime(e.target.value);
+            if (isPlaying) stopPlay();
+        });
+
         function startPlay() {
+            // Se c'è un nodo selezionato specificamente, lo resettiamo per pulizia.
+            // Ma se c'è un filtro attivo (Search o Suggested View) senza selezione nodo, lo manteniamo.
+            if (selectedNodeData) {
+                resetHighlight(); // Rimuove l'highlight del nodo selezionato
+                selectedNodeData = null;
+                if (selectionRing) selectionRing.style("opacity", 0);
+                clearNodeDetails();
+            }
+
             if (currentTime >= timeDomain[1]) currentTime = timeDomain[0]; // Riavvia se alla fine
             isPlaying = true;
             playBtn.innerHTML = `
@@ -2763,6 +2870,21 @@ globalClusterMembers.forEach((members, clusterId) => {
         playBtn.addEventListener("click", () => {
             if (isPlaying) stopPlay();
             else startPlay();
+        });
+
+        // Spacebar to toggle playback
+        document.addEventListener("keydown", (e) => {
+            if (!interactive) return; // Disable during tutorial
+            
+            const isTyping = document.activeElement.tagName === "INPUT" || 
+                             document.activeElement.tagName === "TEXTAREA" ||
+                             document.activeElement.isContentEditable;
+
+            if (e.code === "Space" && !isTyping) {
+                e.preventDefault(); // Prevent page scroll
+                if (isPlaying) stopPlay();
+                else startPlay();
+            }
         });
 
         updateTimeUI(); // Mostra data iniziale
