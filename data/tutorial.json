@@ -7,7 +7,7 @@
   },
   {
     "title": "Start from the Subject",
-    "text": "The <span class=\"tut-term-subject\">Subject</span> is the main topic. Use it as your anchor: every position and argument links back to this core question.",
+    "text": "The <span class=\"tut-term-subject\">Subject</span> is the main topic of the discussion. Use it as your anchor: every position and argument links back to this core question.",
     "visual": "assets/tutorial/step_02.svg",
     "focusType": "SUBJECT",
     "annotation": "The Main Topic"
@@ -46,6 +46,18 @@
     "visual": "assets/tutorial/step_07.svg",
     "focusType": "OUTDEGREE",
     "annotation": "Highly Connected"
+  },
+  {
+    "title": "Your Personal Notes Space",
+    "text": "As you move through the discussion, you can add <strong>notes</span></strong> and <strong>drawings</span></strong> directly on the canvas to support your analysis and keep track of emerging insights.<br><br>These annotations are <strong>personal</strong>: they are visible only to you and are not shared with anyone else.",
+    "visual": "assets/tutorial/step_08.svg",
+    "focusType": "ALL"
+  },
+  {
+    "title": "<strong><span class=\"ai-text\">AI</span></strong> Role and Human <strong><span class=\"tut-term-against\">Contestability</span></strong>",
+    "text": "<span class=\"ai-text\">AI</span> helps by grouping semantically similar arguments into <span class=\"tut-term-cluster\">clusters</span> and extracting <span class=\"tut-term-keyword\">keywords</span> from argument nodes, making thematic bridges easier to read.<br><br>At the same time, AI can make errors. Human feedback is fundamental to keep this intervention useful and meaningful: when a suggestion appears weak or misleading, open node details and <strong><span class=\"tut-term-against\">contest the AI suggestion</span></strong>.",
+    "visual": "",
+    "focusType": "ALL"
   },
   {
     "title": "Now Explore",

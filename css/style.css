@@ -30,11 +30,11 @@
     --c-ai: #6f42c1;
 
     /* Colori Nodi (Sincronizzati con il Grafo) */
-    --color-subject: #3f88c5;
+    --color-subject: #345995;
     --color-position: #F49D37;
     --color-infavor: #00cc66;
     --color-against: #db3a34;
-    --color-keyword: #B38CB4;
+    --color-keyword: #069da8;
     --color-cluster-fill: #e2e8f0;
     --color-cluster-stroke: #4d545e;
 
@@ -416,6 +416,8 @@ svg {
     pointer-events: none;
     transform: translateY(10px);
     transition: opacity 0.3s, transform 0.3s;
+    position: relative;
+    overflow: visible;
 }
 
 #details-card.visible {
@@ -447,6 +449,111 @@ svg {
     width: 100%;
 }
 
+#node-types {
+    width: 100%;
+}
+
+#details-close-btn {
+    margin-left: auto;
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--c-border);
+    background: var(--c-bg-inset);
+    color: var(--c-text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--fs-small);
+    line-height: 1;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+#details-close-btn:hover {
+    color: var(--c-text-primary);
+    border-color: var(--c-border-strong);
+}
+
+#details-ai-info {
+    display: none;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--c-border);
+    background: var(--c-bg-panel);
+}
+
+#details-ai-info-toggle {
+    width: 100%;
+    min-height: 30px;
+    padding: 6px 10px;
+    border: 1px solid color-mix(in srgb, var(--c-ai), var(--c-border) 35%);
+    background: color-mix(in srgb, var(--c-bg-panel), var(--c-ai) 10%);
+    color: var(--c-ai);
+    font-family: var(--font-mono);
+    font-size: var(--fs-tiny);
+    font-weight: var(--fw-medium);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+#details-ai-info-toggle:hover {
+    border-color: var(--c-ai);
+    background: color-mix(in srgb, var(--c-bg-panel), var(--c-ai) 18%);
+    color: color-mix(in srgb, var(--c-ai), white 20%);
+}
+
+#details-ai-info-toggle svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.25s ease;
+}
+
+#details-ai-info-content {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    padding: 0 10px;
+    transition: max-height 0.28s ease, opacity 0.22s ease, padding 0.28s ease;
+}
+
+#details-ai-info.open #details-ai-info-content {
+    max-height: 360px;
+    opacity: 1;
+    padding: 10px 10px 2px 10px;
+}
+
+#details-ai-info.open #details-ai-info-toggle svg {
+    transform: rotate(180deg);
+}
+
+#details-ai-info .ai-info-title {
+    font-family: var(--font-mono);
+    font-size: var(--fs-tiny);
+    font-weight: var(--fw-bold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--c-ai);
+    margin-bottom: 6px;
+}
+
+#details-ai-info p {
+    margin: 0 0 8px 0;
+    font-family: var(--font-mono);
+    font-size: var(--fs-small);
+    line-height: var(--lh-normal);
+    color: var(--c-text-secondary);
+}
+
+#details-ai-info p:last-child {
+    margin-bottom: 0;
+}
+
 #user-avatar {
     width: 32px;
     height: 32px;
@@ -467,8 +574,8 @@ svg {
     color: var(--c-text-primary);
 }
 
-/* Content Container (il div centrale) */
-#details-card>div:nth-child(2) {
+/* Content Container */
+#details-content {
     padding: 20px;
     display: flex;
     flex-direction: column;

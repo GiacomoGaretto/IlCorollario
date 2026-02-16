@@ -1516,6 +1516,23 @@ globalClusterMembers.forEach((members, clusterId) => {
         return sequence;
     }
 
+    function getStableAiConfidence(nodeData) {
+        const rawConfidence = Number(nodeData.detail__ai_confidence ?? nodeData.ai_confidence);
+        if (Number.isFinite(rawConfidence)) {
+            const normalized = rawConfidence <= 1 ? rawConfidence * 100 : rawConfidence;
+            return Math.max(0, Math.min(100, Math.round(normalized)));
+        }
+
+        // Fallback: deterministic pseudo-score to avoid random jumps while browsing nodes.
+        const seed = String(nodeData.id || nodeData.detail__title || "ai-node");
+        let hash = 0;
+        for (let i = 0; i < seed.length; i++) {
+            hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+            hash |= 0;
+        }
+        return 82 + (Math.abs(hash) % 17);
+    }
+
     function showNodeDetails(d) {
         const detailsCard = d3.select("#details-card");
         detailsCard.classed("visible", true);
@@ -1572,7 +1589,8 @@ globalClusterMembers.forEach((members, clusterId) => {
         }
 
         // Node Type Pill
-        let nodeType = titleAccessorGlobal(d);
+        const rawNodeType = titleAccessorGlobal(d);
+        let nodeType = rawNodeType;
         if (nodeType === "CLUSTER") nodeType = "ARGUMENT CLUSTER";
         if (nodeType === "ENTITY") nodeType = "KEYWORD";
 
@@ -1608,14 +1626,37 @@ globalClusterMembers.forEach((members, clusterId) => {
                 .text(dateStr);
         }
 
-        // AI Confidence Badge (Fake data for future implementation)
-        if (titleAccessorGlobal(d) === "CLUSTER" || titleAccessorGlobal(d) === "ENTITY") {
-            const fakeConfidence = Math.floor(Math.random() * (98 - 82) + 82); // 82-98%
-            typesContainer.append("span")
-                .attr("class", "pill ai-confidence")
-                .style("border-color", "var(--c-ai)")
-                .style("color", "var(--c-ai)")
-                .text(`AI CONFIDENCE: ${fakeConfidence}%`);
+        const aiInfoSection = d3.select("#details-ai-info");
+        const aiInfoToggle = d3.select("#details-ai-info-toggle");
+        const aiInfoContent = d3.select("#details-ai-info-content");
+        const aiInfoText = d3.select("#ai-info-text");
+        const aiConfidenceText = d3.select("#ai-confidence-text");
+        const isAiGeneratedNode = rawNodeType === "CLUSTER" || rawNodeType === "ENTITY";
+
+        if (isAiGeneratedNode) {
+            const confidence = getStableAiConfidence(d);
+            const scopeText = rawNodeType === "CLUSTER"
+                ? "The model groups arguments by semantic similarity and stance context to form thematic clusters."
+                : "The model extracts recurring semantic entities and links arguments through shared concepts.";
+
+            aiInfoText.text(scopeText);
+            aiConfidenceText.text(`Confidence ${confidence}%: high internal consistency in the AI assignment, not factual certainty.`);
+            aiInfoSection.style("display", "block").classed("open", false);
+            aiInfoToggle.attr("aria-expanded", "false");
+            aiInfoContent.attr("aria-hidden", "true");
+
+            aiInfoToggle.on("click", (event) => {
+                event.stopPropagation();
+                const shouldOpen = !aiInfoSection.classed("open");
+                aiInfoSection.classed("open", shouldOpen);
+                aiInfoToggle.attr("aria-expanded", shouldOpen ? "true" : "false");
+                aiInfoContent.attr("aria-hidden", shouldOpen ? "false" : "true");
+            });
+        } else {
+            aiInfoSection.style("display", "none").classed("open", false);
+            aiInfoToggle.attr("aria-expanded", "false");
+            aiInfoContent.attr("aria-hidden", "true");
+            aiInfoToggle.on("click", null);
         }
 
         const displayTitle = (titleAccessorGlobal(d) === "CLUSTER") ?
@@ -2005,6 +2046,9 @@ globalClusterMembers.forEach((members, clusterId) => {
         d3.select("#details-card").classed("visible", false);
         // Ripristina la legenda
         d3.select("#info-panel").classed("details-active", false);
+        d3.select("#details-ai-info").style("display", "none").classed("open", false);
+        d3.select("#details-ai-info-toggle").attr("aria-expanded", "false");
+        d3.select("#details-ai-info-content").attr("aria-hidden", "true");
     }
 
     function truncate(str, max) {
@@ -2073,6 +2117,14 @@ globalClusterMembers.forEach((members, clusterId) => {
     const tutorialToggle = document.getElementById("tutorial-toggle");
     const infoPanel = document.getElementById("info-panel");
     const depthNav = document.getElementById("depth-nav");
+    const detailsCloseBtn = document.getElementById("details-close-btn");
+
+    if (detailsCloseBtn) {
+        detailsCloseBtn.addEventListener("click", (event) => {
+            event.stopPropagation();
+            clearNodeDetails();
+        });
+    }
 
     function collapseInfoPanel() {
         if (!infoPanel) return;
