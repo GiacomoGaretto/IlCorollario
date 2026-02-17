@@ -138,13 +138,22 @@
 
         <!-- SUGGESTED VIEWS -->
         <div id="suggested-views-container" class="nav-hidden">
-            <div class="suggested-view-header">Suggested Views</div>
+            <div class="suggested-view-header">
+                <span>Suggested Views</span>
+            </div>
             <div class="suggested-view-row">
                 <span>Most Contested</span>
                 <label class="toggle-switch">
                     <input type="checkbox" id="toggle-contested">
                     <span class="slider"></span>
                 </label>
+                <div class="sv-tooltip">
+                    <div class="sv-info-section">
+                        <strong>Most Contested</strong>
+                        <p>How is ‘Most Contested’ calculated?<br>This view highlights the position with the highest number of arguments both in favor and against.</p>
+                        <p class="sv-warning">⚠ These criteria shape what appears as “contested.” Different thresholds would produce different results.</p>
+                    </div>
+                </div>
             </div>
             <div class="suggested-view-row">
                 <span>Shared Keywords</span>
@@ -152,6 +161,17 @@
                     <input type="checkbox" id="toggle-shared">
                     <span class="slider"></span>
                 </label>
+                <div class="sv-tooltip">
+                    <div class="sv-info-section">
+                        <strong>Shared Keywords</strong>
+                        <p>How is ‘Shared Keywords’ calculated?<br>This view highlights concepts that appear in multiple arguments, acting as bridges between different viewpoints.</p>
+                        <p>Criteria used:</p>
+                        <ul class="sv-list">
+                            <li>Keyword appears in at least 2 distinct arguments</li>
+                        </ul>
+                        <p class="sv-warning">⚠ These criteria shape what appears as “shared.”</p>
+                    </div>
+                </div>
             </div>
             <div class="suggested-view-row">
                 <span>Lone Voices</span>
@@ -159,6 +179,18 @@
                     <input type="checkbox" id="toggle-lone">
                     <span class="slider"></span>
                 </label>
+                <div class="sv-tooltip">
+                    <div class="sv-info-section">
+                        <strong>Lone Voices</strong>
+                        <p>How is ‘Lone Voices’ calculated?<br>This view highlights positions that received no direct arguments, representing isolated or overlooked perspectives.</p>
+                        <p>Criteria used:</p>
+                        <ul class="sv-list">
+                            <li>0 arguments connected</li>
+                            <li>Connected only to the main Subject</li>
+                        </ul>
+                        <p class="sv-warning">⚠ These criteria shape what appears as “lone.”</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -222,7 +254,20 @@
             <div class="reset-tooltip">Fit to Screen</div>
         </div>
 
-        <button id="tutorial-toggle">Open Tutorial</button>
+        <!-- TOP LEFT CONTROLS (Tutorial + Ledger) -->
+        <div id="top-left-controls">
+            <button id="tutorial-toggle">Open Tutorial</button>
+            <button id="ledger-btn">?</button>
+        </div>
+
+        <!-- LEDGER PANEL (Moved to root for independent positioning) -->
+        <div id="ledger-panel" class="nav-hidden">
+            <div id="ledger-header">
+                <span>Data to Knowledge</span>
+                <button id="ledger-close-btn">✕</button>
+            </div>
+            <div id="ledger-content"></div>
+        </div>
 
         <svg id="graph"></svg>
         <div id="tooltip" class="tooltip" style="opacity: 0;"></div>
