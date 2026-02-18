@@ -1008,8 +1008,8 @@ svg {
     flex-shrink: 0;
     
     font-family: var(--font-mono);
-    font-size: var(--fs-small);
-    font-weight: var(--fw-bold);
+    font-size: var(--fs-base);
+    font-weight: var(--fw-regular);
     
     border-radius: 2px;
     border: 1px solid var(--c-border-strong);
@@ -1026,6 +1026,15 @@ svg {
 #ledger-btn:hover {
     border-color: var(--c-accent);
     color: var(--c-accent);
+}
+
+#ledger-tooltip {
+    left: calc(100% + var(--panel-gap));
+    top: 50%;
+    transform: translateY(-50%);
+    text-transform: none;
+    text-transform: uppercase;
+    border: 0px solid var(--c-border);
 }
 
 #ledger-panel {
@@ -2029,6 +2038,11 @@ input:checked+.slider:before {
 #zoom-in-btn:hover+.reset-tooltip,
 #zoom-out-btn:hover+.reset-tooltip,
 #theme-settings-btn:hover+.reset-tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
+#ledger-btn:hover+#ledger-tooltip {
     visibility: visible;
     opacity: 1;
 }
