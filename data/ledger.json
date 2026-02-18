@@ -1,0 +1,22 @@
+[
+  {
+    "step": 1,
+    "title": "Where the Content Comes From",
+    "content": "<p>The discussion comes from a real debate hosted on the BCAUSE platform.</p><p>Participants wrote their arguments in their own words.</p><p>No text was rewritten, summarized, or modified before being shown here.</p><p><strong>Why this matters:</strong>You are seeing the original arguments, not AI-generated summaries.</p>"
+  },
+  {
+    "step": 2,
+    "title": "How AI Groups Arguments into Themes (Clusters)",
+    "content": "<p>The system looks at arguments that belong to the same position and groups together those that use similar ideas or wording.</p><p><strong>Important:</strong></p><ul><li>AI does not judge whether arguments are good or correct.</li><li>AI does not compare arguments across different positions.</li><li>Grouping is based only on similarities in content.</li></ul><p><strong>Possible limits:</strong></p><ul><li>Two arguments about the same idea may not be grouped if they are phrased very differently.</li><li>Arguments that use similar wording may be grouped even if they have different intentions.</li></ul><p><strong>Why this matters:</strong>Clusters show recurring themes, not “truths.”</p>"
+  },
+  {
+    "step": 3,
+    "title": "How AI Identifies Keywords",
+    "content": "<p>The system looks at the text of arguments and identifies recurring or central terms.</p><ul><li>Keywords are extracted only from arguments.</li><li>Keywords are not added manually.</li><li>Shared keywords create links between arguments.</li></ul><p><strong>Important:</strong>A keyword appearing often does not mean it is more important.<br>If a concept is not shown as a keyword, it does not mean it is irrelevant.</p><p><strong>Why this matters:</strong>Keywords help reveal connections, but they do not measure importance.</p>"
+  },
+  {
+    "step": 4,
+    "title": "What the System Does NOT Do",
+    "content": "<p>The system does not:</p><ul><li>Decide which argument is stronger</li><li>Check whether claims are true</li><li>Rank participants</li><li>Remove minority views</li><li>Predict consensus</li><li>Rewrite arguments</li></ul><p>It organizes content to help you explore it.</p><p><strong>Why this matters:</strong>Interpretation is still your responsibility.</p>"
+  }
+]

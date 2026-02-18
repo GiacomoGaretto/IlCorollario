@@ -252,8 +252,12 @@ Promise.all([
     d3.json("data/tutorial.json").catch(err => {
         console.error("Errore caricamento tutorial.json:", err);
         return [];
+    }),
+    d3.json("data/ledger.json").catch(err => {
+        console.warn("File ledger.json not found", err);
+        return [];
     })
-]).then(([nodes, edges, authorsData, tutorialData]) => {
+]).then(([nodes, edges, authorsData, tutorialData, ledgerData]) => {
 
     // Inizializza l'anello di selezione
     selectionRing = nodeGroup.append("path").attr("class", "selection-ring").style("opacity", 0);
@@ -3658,6 +3662,53 @@ globalClusterMembers.forEach((members, clusterId) => {
             e.stopPropagation();
             legendCard.classList.toggle("minimized");
         });
+    }
+
+    // --- LEDGER PANEL LOGIC ---
+    const ledgerBtn = document.getElementById("ledger-btn");
+    const ledgerPanel = document.getElementById("ledger-panel");
+    const ledgerCloseBtn = document.getElementById("ledger-close-btn");
+    const ledgerContent = document.getElementById("ledger-content");
+
+    if (ledgerBtn && ledgerPanel && ledgerContent) {
+        // Populate Ledger Content
+        if (Array.isArray(ledgerData)) {
+            ledgerData.forEach(item => {
+                const stepDiv = document.createElement("div");
+                stepDiv.className = "ledger-step";
+                stepDiv.innerHTML = `
+                    <div class="ledger-step-number">${item.step}</div>
+                    <div class="ledger-step-title">${item.title}</div>
+                    <div class="ledger-step-body">${item.content}</div>
+                `;
+                ledgerContent.appendChild(stepDiv);
+            });
+        }
+
+        // Toggle Logic
+        ledgerBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            ledgerPanel.classList.toggle("nav-hidden");
+            // Close info panel if open to avoid overlap/clutter
+            if (!ledgerPanel.classList.contains("nav-hidden")) {
+                collapseInfoPanel();
+            } else {
+                // Restore info panel if tutorial is not active
+                if (tutorialSidebar.classList.contains('tutorial-closed')) {
+                    expandInfoPanel();
+                }
+            }
+        });
+
+        if (ledgerCloseBtn) {
+            ledgerCloseBtn.addEventListener("click", () => {
+                ledgerPanel.classList.add("nav-hidden");
+                // Restore info panel if tutorial is not active
+                if (tutorialSidebar.classList.contains('tutorial-closed')) {
+                    expandInfoPanel();
+                }
+            });
+        }
     }
 
     updateTutorial();
