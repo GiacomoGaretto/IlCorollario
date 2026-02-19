@@ -410,6 +410,7 @@ svg {
     flex-direction: column;
     gap: 0;
     overflow-y: hidden;
+    min-height: 0;
 
     /* Nascosto di default */
     opacity: 0;
@@ -417,7 +418,7 @@ svg {
     transform: translateY(10px);
     transition: opacity 0.3s, transform 0.3s;
     position: relative;
-    overflow: visible;
+    overflow: hidden;
 }
 
 #details-card.visible {
