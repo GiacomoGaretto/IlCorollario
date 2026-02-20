@@ -1,6 +1,6 @@
 [
   {
-    "title": "Welcome to DelibGraph",
+    "title": "Welcome to IlCorollario",
     "text": "You’re viewing a real discussion from an online deliberation platform. Instead of scrolling through a long thread, this <strong>Knowledge Graph</strong> shows how ideas connect—so you can spot patterns, tensions, and shared themes.<br><br>An <span class=\"ai-text\">AI</span> helps by analysing the debate and suggesting clusters and keywords. AI can make mistakes—use node details to verify, question, or contest what you see.",
     "visual": "assets/tutorial/step_01.svg",
     "focusType": "ALL"
