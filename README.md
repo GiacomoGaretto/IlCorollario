@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18352223.svg)](https://doi.org/10.5281/zenodo.18352223)
+[[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18352223.svg)](https://doi.org/10.5281/zenodo.18352223)](https://doi.org/10.5281/zenodo.18822241)
 
 # Knowledge Graph Network Visualization (D3.js)
 
